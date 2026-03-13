@@ -1,0 +1,7 @@
+{
+  "name": "GlassPiano",
+  "description": "An interactive, AI-powered piano tutor that tracks your hands in real-time using your camera.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
