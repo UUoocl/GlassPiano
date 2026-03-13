@@ -85,7 +85,7 @@ export const NotationView: React.FC<NotationViewProps> = ({ xmlUrl, currentNoteI
   }, [currentNoteIndex, isFingerOver]);
 
   return (
-    <div className="w-full h-full bg-white rounded-xl shadow-lg overflow-hidden p-4 relative">
+    <div className="w-full h-full bg-white relative">
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10 p-6 text-center">
           <p className="text-red-500 font-medium">{error}</p>

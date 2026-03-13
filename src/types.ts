@@ -10,6 +10,11 @@ export interface Calibration {
   bottomRight: Point;
 }
 
+export interface KeyboardConfig {
+  totalKeys: number;
+  startMidi: number;
+}
+
 export interface PianoKey {
   pitch: number; // MIDI pitch
   rect: {

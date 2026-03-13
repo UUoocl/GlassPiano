@@ -2,8 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { CameraView } from './components/CameraView';
 import { NotationView } from './components/NotationView';
 import { CalibrationOverlay } from './components/CalibrationOverlay';
+import { CalibrationAdjuster } from './components/CalibrationAdjuster';
+import { KeyboardSettings } from './components/KeyboardSettings';
 import { MidiSelector } from './components/MidiSelector';
-import { Calibration, Point } from './types';
+import { KeyboardOverlay } from './components/KeyboardOverlay';
+import { Calibration, Point, KeyboardConfig } from './types';
 import { mapPointToPiano, getPitchFromX, isKeyPress } from './services/visionService';
 import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
@@ -23,13 +26,16 @@ export default function App() {
   }, []);
 
   const [calibration, setCalibration] = useState<Calibration | null>(null);
-  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibrationStep, setCalibrationStep] = useState<'corners' | 'verify' | 'complete'>('corners');
+  const [keyboardConfig, setKeyboardConfig] = useState<KeyboardConfig>({ totalKeys: 88, startMidi: 21 });
   const [showMidiSettings, setShowMidiSettings] = useState(false);
   const [selectedMidiId, setSelectedMidiId] = useState<string>('');
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [activeNotes, setActiveNotes] = useState<number[]>([]);
+  const [hoveredNotes, setHoveredNotes] = useState<number[]>([]);
   const [isFingerOver, setIsFingerOver] = useState(false);
+  const [handResults, setHandResults] = useState<Results | null>(null);
 
   useEffect(() => {
     midiService.setCallbacks(
@@ -49,34 +55,49 @@ export default function App() {
   }, [currentNoteIndex, isPaused]);
 
   const handleHandUpdate = useCallback((results: Results) => {
+    setHandResults(results);
+    
     if (!calibration || isPaused) {
       setIsFingerOver(false);
       return;
     }
 
     const newActiveNotes: number[] = [];
+    const newHoveredNotes: number[] = [];
     let fingerOver = false;
     const targetPitch = CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length];
 
     if (results.multiHandLandmarks) {
       for (const landmarks of results.multiHandLandmarks) {
-        // Index finger tip is landmark 8
-        const tip = landmarks[8];
-        const mapped = mapPointToPiano({ x: tip.x, y: tip.y }, calibration);
+        const fingerTips = [4, 8, 12, 16, 20]; // Thumb, Index, Middle, Ring, Pinky
         
-        const pitch = getPitchFromX(mapped.x);
-        if (pitch === targetPitch) {
-          fingerOver = true;
-        }
+        for (const tipIndex of fingerTips) {
+          const tip = landmarks[tipIndex];
+          const mapped = mapPointToPiano({ x: tip.x, y: tip.y }, calibration);
+          
+          // Only process if the finger is within the calibrated area (with some margin)
+          if (mapped.x >= -0.05 && mapped.x <= 1.05 && mapped.y >= -0.1 && mapped.y <= 1.1) {
+            const pitch = getPitchFromX(mapped.x, keyboardConfig);
+            
+            if (pitch >= keyboardConfig.startMidi && pitch < keyboardConfig.startMidi + keyboardConfig.totalKeys) {
+              newHoveredNotes.push(pitch);
+              
+              if (pitch === targetPitch) {
+                fingerOver = true;
+              }
 
-        if (isKeyPress(mapped)) {
-          newActiveNotes.push(pitch);
+              if (isKeyPress(mapped)) {
+                newActiveNotes.push(pitch);
+              }
+            }
+          }
         }
       }
     }
     setActiveNotes(newActiveNotes);
+    setHoveredNotes(newHoveredNotes);
     setIsFingerOver(fingerOver);
-  }, [calibration, isPaused, currentNoteIndex]);
+  }, [calibration, isPaused, currentNoteIndex, keyboardConfig]);
 
   const triggerSuccess = () => {
     confetti({
@@ -113,107 +134,177 @@ export default function App() {
         </div>
       </header>
 
-      <main className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-80px)]">
-        {/* Left Column: Vision & Controls */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
-          <div className="flex-1 relative">
-            <CameraView calibration={calibration} onHandUpdate={handleHandUpdate} />
+      <main className="p-4 md:p-6 flex flex-col gap-4 md:gap-6 min-h-[calc(100vh-80px)] relative">
+        {/* Persistent Camera View (Hidden in practice mode, but always processing) */}
+        <div className={`
+          ${calibrationStep !== 'complete' 
+            ? 'flex-1 flex flex-col items-center justify-center z-10' 
+            : 'fixed opacity-0 pointer-events-none -z-50'}
+        `}>
+          <div className="w-full max-w-4xl aspect-video relative bg-black rounded-xl overflow-hidden shadow-[12px_12px_0px_0px_#141414] border-4 border-[#141414]">
+            <CameraView 
+              calibration={calibration} 
+              onHandUpdate={handleHandUpdate} 
+              showVideo={calibrationStep !== 'complete'} 
+            />
             
-            {isCalibrating && (
-              <CalibrationOverlay onComplete={(cal) => {
-                setCalibration(cal);
-                setIsCalibrating(false);
-              }} />
+            {calibrationStep === 'corners' && (
+              <>
+                <CalibrationOverlay onComplete={(cal) => {
+                  setCalibration(cal);
+                  setCalibrationStep('verify');
+                }} />
+                <KeyboardSettings config={keyboardConfig} onChange={setKeyboardConfig} />
+              </>
             )}
 
-            <AnimatePresence>
-              {showMidiSettings && (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="absolute top-4 right-4 z-40 w-72"
-                >
-                  <MidiSelector onDeviceSelect={(id) => {
-                    setSelectedMidiId(id);
-                    // Optionally auto-close or keep open
-                  }} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            {/* HUD Overlay */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
-              <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                VISION ENGINE: ACTIVE
-              </div>
-              <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20">
-                LATENCY: 24ms
-              </div>
-              <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${selectedMidiId ? 'bg-blue-500' : 'bg-gray-500'}`} />
-                MIDI: {selectedMidiId ? 'CONNECTED' : 'NOT CONNECTED'}
-              </div>
-              {activeNotes.length > 0 && (
-                <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex flex-wrap gap-1 max-w-[200px]">
-                  <span className="opacity-50">KEYS:</span>
-                  {activeNotes.map(n => (
-                    <span key={n} className="text-green-400">MIDI-{n}</span>
-                  ))}
+            {calibrationStep === 'verify' && (
+              <div className="absolute inset-0">
+                <CalibrationAdjuster 
+                  calibration={calibration!}
+                  onChange={setCalibration}
+                  activeNotes={activeNotes}
+                  hoveredNotes={hoveredNotes}
+                  config={keyboardConfig}
+                />
+                <div className="absolute inset-0 pointer-events-none z-40">
+                  <KeyboardOverlay 
+                    activeNotes={[]}
+                    hoveredNotes={[]}
+                    targetNote={null}
+                    handResults={handResults}
+                    hideKeyboard={true}
+                    config={keyboardConfig}
+                  />
                 </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* Controls */}
-          <div className="bg-white border border-[#141414] p-4 flex items-center justify-between shadow-[4px_4px_0px_0px_#141414]">
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setIsPaused(!isPaused)}
-                className="flex items-center gap-2 px-6 py-2 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
-              >
-                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                {isPaused ? 'Start Session' : 'Pause Session'}
-              </button>
-              <button 
-                onClick={() => setIsCalibrating(true)}
-                className="flex items-center gap-2 px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Recalibrate
-              </button>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Current Exercise</p>
-              <p className="font-serif italic text-lg">C Major Scale - Part 1</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Notation */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <div className="flex-1">
-            <NotationView 
-              xmlUrl="/OpenSheetMusic/MuzioClementi_SonatinaOp36No1_Part1.xml" 
-              currentNoteIndex={currentNoteIndex}
-              isFingerOver={isFingerOver}
-            />
-          </div>
-
-          {/* Stats / Progress */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-[#141414] p-4 shadow-[4px_4px_0px_0px_#141414]">
-              <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Accuracy</p>
-              <p className="text-3xl font-mono">94%</p>
-            </div>
-            <div className="bg-white border border-[#141414] p-4 shadow-[4px_4px_0px_0px_#141414]">
-              <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Notes Played</p>
-              <p className="text-3xl font-mono">{currentNoteIndex} / 42</p>
+                <KeyboardSettings config={keyboardConfig} onChange={setKeyboardConfig} />
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white p-6 border-2 border-[#141414] shadow-[8px_8px_0px_0px_#141414] w-[90%] max-w-md text-center pointer-events-auto z-[60]">
+                  <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Adjust & Verify</h2>
+                  <p className="text-sm opacity-70 mb-6">
+                    Drag the blue corners to perfectly align the virtual keyboard with your physical keys. Press keys to test the mapping.
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <button 
+                      onClick={() => {
+                        setCalibration(null);
+                        setCalibrationStep('corners');
+                      }}
+                      className="px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
+                    >
+                      Restart
+                    </button>
+                    <button 
+                      onClick={() => setCalibrationStep('complete')}
+                      className="px-6 py-2 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-md font-mono border border-white/20">
+              {calibrationStep === 'corners' ? 'STEP 1: CALIBRATE KEYBOARD' : 'STEP 2: VERIFY MAPPING'}
             </div>
           </div>
         </div>
+
+        {/* Practice Mode UI */}
+        {calibrationStep === 'complete' && (
+          <div className="flex-1 flex flex-col gap-6 animate-in fade-in duration-500">
+            <div className="flex-1 relative bg-white border-4 border-[#141414] shadow-[12px_12px_0px_0px_#141414] overflow-hidden rounded-xl">
+              {/* The base layer: Sheet Music */}
+              <NotationView 
+                xmlUrl="/OpenSheetMusic/MuzioClementi_SonatinaOp36No1_Part1.xml" 
+                currentNoteIndex={currentNoteIndex}
+                isFingerOver={isFingerOver}
+              />
+              
+              {/* The overlay layer: Keyboard & Hands */}
+              <div className="absolute inset-0 pointer-events-none">
+                <KeyboardOverlay 
+                  activeNotes={activeNotes}
+                  hoveredNotes={hoveredNotes}
+                  targetNote={CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length]}
+                  handResults={handResults}
+                  config={keyboardConfig}
+                />
+              </div>
+
+              {/* HUD Overlay */}
+              <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
+                <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${handResults?.multiHandLandmarks?.length ? 'bg-green-500' : 'bg-red-500'}`} />
+                  HANDS: {handResults?.multiHandLandmarks?.length ? 'DETECTED' : 'NOT FOUND'}
+                </div>
+                <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${selectedMidiId ? 'bg-blue-500' : 'bg-gray-500'}`} />
+                  MIDI: {selectedMidiId ? 'CONNECTED' : 'NOT CONNECTED'}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+              <div className="lg:col-span-8 bg-white border-2 border-[#141414] p-4 flex items-center justify-between shadow-[6px_6px_0px_0px_#141414]">
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsPaused(!isPaused)}
+                    className="flex items-center gap-2 px-8 py-3 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
+                  >
+                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    {isPaused ? 'Start Session' : 'Pause Session'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setCalibration(null);
+                      setCalibrationStep('corners');
+                    }}
+                    className="flex items-center gap-2 px-8 py-3 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Recalibrate
+                  </button>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Current Exercise</p>
+                  <p className="font-serif italic text-xl">Clementi Sonatina Op.36 No.1</p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-4 grid grid-cols-2 gap-4">
+                <div className="bg-white border-2 border-[#141414] p-4 shadow-[6px_6px_0px_0px_#141414]">
+                  <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Accuracy</p>
+                  <p className="text-3xl font-mono">94%</p>
+                </div>
+                <div className="bg-white border-2 border-[#141414] p-4 shadow-[6px_6px_0px_0px_#141414]">
+                  <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Progress</p>
+                  <p className="text-3xl font-mono">{currentNoteIndex} / 42</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {showMidiSettings && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+              onClick={() => setShowMidiSettings(false)}
+            >
+              <div onClick={e => e.stopPropagation()} className="w-full max-w-md">
+                <MidiSelector onDeviceSelect={(id) => {
+                  setSelectedMidiId(id);
+                  setShowMidiSettings(false);
+                }} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

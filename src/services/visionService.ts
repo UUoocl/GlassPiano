@@ -1,4 +1,4 @@
-import { Point, Calibration } from '../types';
+import { Point, Calibration, KeyboardConfig } from '../types';
 
 /**
  * Maps a point from the camera coordinate space (0-1) 
@@ -6,33 +6,36 @@ import { Point, Calibration } from '../types';
  * Uses a basic bilinear interpolation for the 4-point warp.
  */
 export function mapPointToPiano(p: Point, cal: Calibration): Point {
-  // This is a simplified version of a perspective transform.
-  // For a true perspective transform, we'd need a 3x3 homography matrix.
-  // Here we use bilinear interpolation as a robust approximation for UI feedback.
-  
   const { topLeft, topRight, bottomLeft, bottomRight } = cal;
 
-  // Horizontal interpolation
-  const topX = topLeft.x + (topRight.x - topLeft.x) * p.x;
-  const bottomX = bottomLeft.x + (bottomRight.x - bottomLeft.x) * p.x;
-  const mappedX = topX + (bottomX - topX) * p.y;
+  // We want to find the relative (0-1) coordinates (u, v) of point p 
+  // within the quadrilateral defined by the 4 calibration points.
+  
+  // A simple but effective approximation for piano mapping:
+  // 1. Calculate how far 'p' is between the left and right boundaries at its current vertical level.
+  
+  // Interpolate the left and right boundary X-coordinates at the point's Y level
+  const leftXAtY = topLeft.x + (bottomLeft.x - topLeft.x) * ((p.y - topLeft.y) / (bottomLeft.y - topLeft.y || 1));
+  const rightXAtY = topRight.x + (bottomRight.x - topRight.x) * ((p.y - topRight.y) / (bottomRight.y - topRight.y || 1));
+  
+  const u = (p.x - leftXAtY) / (rightXAtY - leftXAtY || 1);
+  
+  // 2. Calculate how far 'p' is between the top and bottom boundaries
+  // Interpolate the top and bottom boundary Y-coordinates at the point's X level
+  const topYAtX = topLeft.y + (topRight.y - topLeft.y) * ((p.x - topLeft.x) / (topRight.x - topLeft.x || 1));
+  const bottomYAtX = bottomLeft.y + (bottomRight.y - bottomLeft.y) * ((p.x - bottomLeft.x) / (bottomRight.x - bottomLeft.x || 1));
+  
+  const v = (p.y - topYAtX) / (bottomYAtX - topYAtX || 1);
 
-  // Vertical interpolation
-  const leftY = topLeft.y + (bottomLeft.y - topLeft.y) * p.y;
-  const rightY = topRight.y + (bottomRight.y - topRight.y) * p.y;
-  const mappedY = leftY + (rightY - leftY) * p.x;
-
-  return { x: mappedX, y: mappedY };
+  return { x: u, y: v };
 }
 
 /**
  * Determines the MIDI pitch based on the normalized X coordinate on the piano.
- * Assumes a standard 88-key piano for the mapping.
+ * Uses the provided keyboard configuration.
  */
-export function getPitchFromX(x: number): number {
-  const START_MIDI = 21; // A0
-  const TOTAL_KEYS = 88;
-  return Math.floor(x * TOTAL_KEYS) + START_MIDI;
+export function getPitchFromX(x: number, config: KeyboardConfig): number {
+  return Math.floor(x * config.totalKeys) + config.startMidi;
 }
 
 /**
