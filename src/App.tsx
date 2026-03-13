@@ -1,45 +1,82 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { CameraView } from './components/CameraView';
 import { NotationView } from './components/NotationView';
 import { CalibrationOverlay } from './components/CalibrationOverlay';
+import { MidiSelector } from './components/MidiSelector';
 import { Calibration, Point } from './types';
 import { mapPointToPiano, getPitchFromX, isKeyPress } from './services/visionService';
+import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
-import { Piano, Music, Settings, Info, Play, Pause, RefreshCw } from 'lucide-react';
+import { Piano, Music, Settings, Info, Play, Pause, RefreshCw, Keyboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
+const CLEMENTI_NOTES = [60, 64, 60, 67, 60, 72, 67, 64, 60, 64, 60, 67]; // C4, E4, C4, G4, C4, C5, G4, E4, C4, E4, C4, G4
+
 export default function App() {
+  useEffect(() => {
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled Rejection:', event.reason);
+    };
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => window.removeEventListener('unhandledrejection', handleRejection);
+  }, []);
+
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [isCalibrating, setIsCalibrating] = useState(false);
+  const [showMidiSettings, setShowMidiSettings] = useState(false);
+  const [selectedMidiId, setSelectedMidiId] = useState<string>('');
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [activeNotes, setActiveNotes] = useState<number[]>([]);
+  const [isFingerOver, setIsFingerOver] = useState(false);
+
+  useEffect(() => {
+    midiService.setCallbacks(
+      (pitch) => {
+        setActiveNotes(prev => [...new Set([...prev, pitch])]);
+        
+        // Advance if the correct MIDI note is hit
+        const targetPitch = CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length];
+        if (pitch === targetPitch && !isPaused) {
+          triggerSuccess();
+        }
+      },
+      (pitch) => {
+        setActiveNotes(prev => prev.filter(p => p !== pitch));
+      }
+    );
+  }, [currentNoteIndex, isPaused]);
 
   const handleHandUpdate = useCallback((results: Results) => {
-    if (!calibration || isPaused) return;
+    if (!calibration || isPaused) {
+      setIsFingerOver(false);
+      return;
+    }
 
     const newActiveNotes: number[] = [];
+    let fingerOver = false;
+    const targetPitch = CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length];
+
     if (results.multiHandLandmarks) {
       for (const landmarks of results.multiHandLandmarks) {
         // Index finger tip is landmark 8
         const tip = landmarks[8];
         const mapped = mapPointToPiano({ x: tip.x, y: tip.y }, calibration);
         
+        const pitch = getPitchFromX(mapped.x);
+        if (pitch === targetPitch) {
+          fingerOver = true;
+        }
+
         if (isKeyPress(mapped)) {
-          const pitch = getPitchFromX(mapped.x);
           newActiveNotes.push(pitch);
         }
       }
     }
     setActiveNotes(newActiveNotes);
-
-    // If the correct note is hit, advance
-    // (This is a simplified check for the demo)
-    if (newActiveNotes.length > 0) {
-      // triggerSuccess(); // Only trigger on specific logic
-    }
-  }, [calibration, isPaused]);
+    setIsFingerOver(fingerOver);
+  }, [calibration, isPaused, currentNoteIndex]);
 
   const triggerSuccess = () => {
     confetti({
@@ -60,6 +97,13 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tighter uppercase italic font-serif">GlassPiano</h1>
         </div>
         <div className="flex gap-4">
+          <button 
+            onClick={() => setShowMidiSettings(!showMidiSettings)}
+            className={`p-2 transition-colors rounded-full ${showMidiSettings ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414] hover:text-[#E4E3E0]'}`}
+            title="MIDI Settings"
+          >
+            <Keyboard className="w-5 h-5" />
+          </button>
           <button className="p-2 hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors rounded-full">
             <Settings className="w-5 h-5" />
           </button>
@@ -81,6 +125,22 @@ export default function App() {
                 setIsCalibrating(false);
               }} />
             )}
+
+            <AnimatePresence>
+              {showMidiSettings && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="absolute top-4 right-4 z-40 w-72"
+                >
+                  <MidiSelector onDeviceSelect={(id) => {
+                    setSelectedMidiId(id);
+                    // Optionally auto-close or keep open
+                  }} />
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {/* HUD Overlay */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -90,6 +150,10 @@ export default function App() {
               </div>
               <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20">
                 LATENCY: 24ms
+              </div>
+              <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${selectedMidiId ? 'bg-blue-500' : 'bg-gray-500'}`} />
+                MIDI: {selectedMidiId ? 'CONNECTED' : 'NOT CONNECTED'}
               </div>
               {activeNotes.length > 0 && (
                 <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex flex-wrap gap-1 max-w-[200px]">
@@ -132,8 +196,9 @@ export default function App() {
         <div className="lg:col-span-5 flex flex-col gap-6">
           <div className="flex-1">
             <NotationView 
-              xmlUrl="https://raw.githubusercontent.com/opensheetmusicdisplay/opensheetmusicdisplay/develop/test/data/MuzioClementi_SonatinaOp36No1_Part1.xml" 
+              xmlUrl="/OpenSheetMusic/MuzioClementi_SonatinaOp36No1_Part1.xml" 
               currentNoteIndex={currentNoteIndex}
+              isFingerOver={isFingerOver}
             />
           </div>
 

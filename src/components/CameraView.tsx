@@ -13,9 +13,17 @@ export const CameraView: React.FC<CameraViewProps> = ({ calibration, onHandUpdat
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const onHandUpdateRef = useRef(onHandUpdate);
+
   useEffect(() => {
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    onHandUpdateRef.current = onHandUpdate;
+  }, [onHandUpdate]);
+
+  useEffect(() => {
+    let requestRef: number;
+    let isMounted = true;
+    let hands: Hands | null = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
     });
 
     hands.setOptions({
@@ -26,7 +34,8 @@ export const CameraView: React.FC<CameraViewProps> = ({ calibration, onHandUpdat
     });
 
     hands.onResults((results) => {
-      onHandUpdate(results);
+      if (!isMounted) return;
+      onHandUpdateRef.current(results);
       
       const canvasCtx = canvasRef.current?.getContext('2d');
       if (canvasCtx && canvasRef.current && videoRef.current) {
@@ -46,23 +55,33 @@ export const CameraView: React.FC<CameraViewProps> = ({ calibration, onHandUpdat
 
     const startCamera = async () => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720 },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            setIsLoading(false);
-            
-            const processVideo = async () => {
-              if (videoRef.current) {
-                await hands.send({ image: videoRef.current });
-              }
-              requestAnimationFrame(processVideo);
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720 },
+          });
+          if (videoRef.current && isMounted) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current?.play();
+              setIsLoading(false);
+              
+              const processVideo = async () => {
+                if (videoRef.current && isMounted && hands) {
+                  try {
+                    await hands.send({ image: videoRef.current });
+                  } catch (e) {
+                    console.error("Hands send error:", e);
+                  }
+                  if (isMounted) {
+                    requestRef = requestAnimationFrame(processVideo);
+                  }
+                }
+              };
+              requestRef = requestAnimationFrame(processVideo);
             };
-            processVideo();
-          };
+          }
+        } catch (err) {
+          console.error("Camera access error:", err);
         }
       }
     };
@@ -70,9 +89,18 @@ export const CameraView: React.FC<CameraViewProps> = ({ calibration, onHandUpdat
     startCamera();
 
     return () => {
-      hands.close();
+      isMounted = false;
+      cancelAnimationFrame(requestRef);
+      if (videoRef.current?.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (hands) {
+        hands.close();
+        hands = null;
+      }
     };
-  }, [onHandUpdate]);
+  }, []); // Only initialize once
 
   return (
     <div className="relative w-full h-full bg-black rounded-xl overflow-hidden shadow-2xl">
