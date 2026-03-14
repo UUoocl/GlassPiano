@@ -7,7 +7,7 @@ import { KeyboardSettings } from './components/KeyboardSettings';
 import { MidiSelector } from './components/MidiSelector';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
 import { Calibration, Point, KeyboardConfig } from './types';
-import { mapPointToPiano, getPitchFromX, isKeyPress } from './services/vision';
+import { mapPointToPiano, getPitchFromX, KeystrokeDetector } from './services/vision';
 import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
 import { Piano, Music, Settings, Info, Play, Pause, RefreshCw, Keyboard } from 'lucide-react';
@@ -36,6 +36,8 @@ export default function App() {
   const [hoveredNotes, setHoveredNotes] = useState<number[]>([]);
   const [isFingerOver, setIsFingerOver] = useState(false);
   const [handResults, setHandResults] = useState<Results | null>(null);
+  
+  const keystrokeDetector = useRef(new KeystrokeDetector());
 
   useEffect(() => {
     midiService.setCallbacks(
@@ -86,7 +88,7 @@ export default function App() {
                 fingerOver = true;
               }
 
-              if (isKeyPress(mapped)) {
+              if (keystrokeDetector.current.processPoint(mapped, pitch)) {
                 newActiveNotes.push(pitch);
               }
             }
