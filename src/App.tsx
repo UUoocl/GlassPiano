@@ -7,7 +7,7 @@ import { KeyboardSettings } from './components/KeyboardSettings';
 import { MidiSelector } from './components/MidiSelector';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
 import { Calibration, Point, KeyboardConfig } from './types';
-import { mapPointToPiano, getPitchFromX, isKeyPress } from './services/visionService';
+import { mapPointToPiano, getPitchFromX, isKeyPress } from './services/vision';
 import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
 import { Piano, Music, Settings, Info, Play, Pause, RefreshCw, Keyboard } from 'lucide-react';
