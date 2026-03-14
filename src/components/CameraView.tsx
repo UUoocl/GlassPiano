@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Hands, Results } from '@mediapipe/hands';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 import { Point, Calibration } from '../types';
+import { getOptimizedMediaPipeConfig } from '../services/mediapipeConfig';
 
 interface CameraViewProps {
   calibration: Calibration | null;
@@ -27,12 +28,7 @@ export const CameraView: React.FC<CameraViewProps> = ({ calibration, onHandUpdat
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
     });
 
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
+    hands.setOptions(getOptimizedMediaPipeConfig());
 
     hands.onResults((results) => {
       if (!isMounted) return;
