@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Enhanced Hand-Keyboard Alignment Calibration**
+- [x] **Track: Enhanced Hand-Keyboard Alignment Calibration**
   *Link: [./tracks/alignment_enhancement_20260314/](./tracks/alignment_enhancement_20260314/)*
