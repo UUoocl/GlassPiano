@@ -19,9 +19,9 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Render Alignment' (Protocol in workflow.md)
 
 ## Phase 3: Interactive Verification & Fine-Tuning UI
-- [ ] Task: Implement Post-Calibration Verification Routine
-    - [ ] Write failing tests for "Verification Step" state transitions
-    - [ ] Implement UI flow prompting user for "Calibration Confirmation Presses"
+- [x] Task: Implement Post-Calibration Verification Routine bb45b33
+    - [x] Write failing tests for "Verification Step" state transitions
+    - [x] Implement UI flow prompting user for "Calibration Confirmation Presses"
 - [ ] Task: Implement Manual Fine-Tuning Controls
     - [ ] Write failing tests for manual rotation/offset adjustments
     - [ ] Implement sliders/controls for real-time alignment tweaking
