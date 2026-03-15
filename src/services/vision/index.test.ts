@@ -51,5 +51,25 @@ describe('Vision Service - Gesture Detection', () => {
       // Released (y drops below release threshold 0.75)
       expect(detector.processPoint({ x: 0.5, y: 0.7 }, pitch)).toBe(false);
     });
+
+    test('wasJustPressed returns true only for the initial press transition', () => {
+      const pitch = 60;
+      
+      // Initial state: not pressed
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.8 }, pitch)).toBe(false);
+      
+      // Press transition: returns true
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.86 }, pitch)).toBe(true);
+      
+      // Subsequent frames while still pressed: returns false
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.86 }, pitch)).toBe(false);
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.8 }, pitch)).toBe(false);
+      
+      // Release transition
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.7 }, pitch)).toBe(false);
+      
+      // New press transition: returns true again
+      expect(detector.wasJustPressed({ x: 0.5, y: 0.86 }, pitch)).toBe(true);
+    });
   });
 });

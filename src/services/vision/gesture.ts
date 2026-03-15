@@ -29,4 +29,20 @@ export class KeystrokeDetector {
     
     return isCurrentlyActive;
   }
+
+  /**
+   * Returns true only for the first frame a pitch is detected as pressed.
+   */
+  public wasJustPressed(p: Point, pitch: number): boolean {
+    const isCurrentlyActive = this.activePitches.has(pitch);
+    
+    if (!isCurrentlyActive && p.y > 0.85) {
+      this.activePitches.add(pitch);
+      return true;
+    } else if (isCurrentlyActive && p.y < 0.75) {
+      this.activePitches.delete(pitch);
+    }
+    
+    return false;
+  }
 }

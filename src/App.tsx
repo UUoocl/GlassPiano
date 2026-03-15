@@ -91,6 +91,11 @@ export default function App() {
               if (keystrokeDetector.current.processPoint(mapped, pitch)) {
                 newActiveNotes.push(pitch);
               }
+
+              // Advance if the correct note is just hit by the vision detector
+              if (pitch === targetPitch && keystrokeDetector.current.wasJustPressed(mapped, pitch)) {
+                triggerSuccess();
+              }
             }
           }
         }
