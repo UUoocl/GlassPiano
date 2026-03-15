@@ -11,7 +11,7 @@ import { Calibration, Point, KeyboardConfig } from './types';
 import { mapPointToPiano, getPitchFromX, KeystrokeDetector } from './services/vision';
 import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
-import { Piano, Music, Settings, Info, Play, Pause, RefreshCw, Keyboard } from 'lucide-react';
+import { Piano, Music, Settings, Info, Play, Pause, RefreshCw, Keyboard, Eye, EyeOff, Layout } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
@@ -33,12 +33,29 @@ export default function App() {
   const [selectedMidiId, setSelectedMidiId] = useState<string>('');
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
+  const [isCompact, setIsCompact] = useState(false);
+  const [showKeyboardOverlay, setShowKeyboardOverlay] = useState(true);
+  const [showHUD, setShowHUD] = useState(true);
   const [activeNotes, setActiveNotes] = useState<number[]>([]);
   const [hoveredNotes, setHoveredNotes] = useState<number[]>([]);
   const [isFingerOver, setIsFingerOver] = useState(false);
   const [handResults, setHandResults] = useState<Results | null>(null);
   
   const keystrokeDetector = useRef(new KeystrokeDetector());
+
+  // Auto-compact mode on small heights
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerHeight < 700) {
+        setIsCompact(true);
+      } else {
+        setIsCompact(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     midiService.setCallbacks(
@@ -126,6 +143,20 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tighter uppercase italic font-serif">GlassPiano</h1>
         </div>
         <div className="flex gap-4">
+          <button 
+            onClick={() => setShowKeyboardOverlay(!showKeyboardOverlay)}
+            className={`p-2 transition-colors rounded-full ${!showKeyboardOverlay ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414] hover:text-[#E4E3E0]'}`}
+            title={showKeyboardOverlay ? "Hide Keyboard Overlay" : "Show Keyboard Overlay"}
+          >
+            {showKeyboardOverlay ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+          </button>
+          <button 
+            onClick={() => setShowHUD(!showHUD)}
+            className={`p-2 transition-colors rounded-full ${!showHUD ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414] hover:text-[#E4E3E0]'}`}
+            title={showHUD ? "Hide HUD" : "Show HUD"}
+          >
+            <Layout className="w-5 h-5" />
+          </button>
           <button 
             onClick={() => setShowMidiSettings(!showMidiSettings)}
             className={`p-2 transition-colors rounded-full ${showMidiSettings ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414] hover:text-[#E4E3E0]'}`}
@@ -227,7 +258,7 @@ export default function App() {
 
         {/* Practice Mode UI */}
         {calibrationStep === 'complete' && (
-          <div className="flex-1 flex flex-col gap-4 md:gap-6 min-h-0 animate-in fade-in duration-500">
+          <div className={`flex-1 flex flex-col ${isCompact ? 'gap-2' : 'gap-4 md:gap-6'} min-h-0 animate-in fade-in duration-500`}>
             <div className="flex-1 relative bg-white border-4 border-[#141414] shadow-[12px_12px_0px_0px_#141414] overflow-hidden rounded-xl min-h-0">
               {/* The base layer: Sheet Music */}
               <NotationView 
@@ -237,65 +268,71 @@ export default function App() {
               />
               
               {/* The overlay layer: Keyboard & Hands */}
-              <div className="absolute inset-0 pointer-events-none">
-                <KeyboardOverlay 
-                  activeNotes={activeNotes}
-                  hoveredNotes={hoveredNotes}
-                  targetNote={CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length]}
-                  handResults={handResults}
-                  config={keyboardConfig}
-                />
-              </div>
+              {showKeyboardOverlay && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <KeyboardOverlay 
+                    activeNotes={activeNotes}
+                    hoveredNotes={hoveredNotes}
+                    targetNote={CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length]}
+                    handResults={handResults}
+                    config={keyboardConfig}
+                  />
+                </div>
+              )}
 
               {/* HUD Overlay */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
-                <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${handResults?.multiHandLandmarks?.length ? 'bg-green-500' : 'bg-red-500'}`} />
-                  HANDS: {handResults?.multiHandLandmarks?.length ? 'DETECTED' : 'NOT FOUND'}
+              {showHUD && (
+                <div className={`absolute ${isCompact ? 'top-2 left-2 gap-1' : 'top-4 left-4 gap-2'} flex flex-col pointer-events-none`}>
+                  <div className="bg-black/80 text-white px-3 py-1 rounded-md text-[10px] font-mono border border-white/20 flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${handResults?.multiHandLandmarks?.length ? 'bg-green-500' : 'bg-red-500'}`} />
+                    {isCompact ? 'CAM' : `HANDS: ${handResults?.multiHandLandmarks?.length ? 'DETECTED' : 'NOT FOUND'}`}
+                  </div>
+                  <div className="bg-black/80 text-white px-3 py-1 rounded-md text-[10px] font-mono border border-white/20 flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${selectedMidiId ? 'bg-blue-500' : 'bg-gray-500'}`} />
+                    {isCompact ? 'MIDI' : `MIDI: ${selectedMidiId ? 'CONNECTED' : 'NOT CONNECTED'}`}
+                  </div>
                 </div>
-                <div className="bg-black/80 text-white px-3 py-1 rounded-md text-xs font-mono border border-white/20 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${selectedMidiId ? 'bg-blue-500' : 'bg-gray-500'}`} />
-                  MIDI: {selectedMidiId ? 'CONNECTED' : 'NOT CONNECTED'}
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Bottom Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-end shrink-0">
-              <div className="lg:col-span-8 bg-white border-2 border-[#141414] p-4 flex items-center justify-between shadow-[6px_6px_0px_0px_#141414]">
+            <div className={`grid grid-cols-1 lg:grid-cols-12 ${isCompact ? 'gap-2' : 'gap-4 md:gap-6'} items-end shrink-0`}>
+              <div className={`lg:col-span-8 bg-white border-2 border-[#141414] ${isCompact ? 'p-2' : 'p-4'} flex items-center justify-between shadow-[6px_6px_0px_0px_#141414]`}>
                 <div className="flex gap-4">
                   <button 
                     onClick={() => setIsPaused(!isPaused)}
-                    className="flex items-center gap-2 px-8 py-3 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
+                    className={`flex items-center gap-2 ${isCompact ? 'px-4 py-2 text-xs' : 'px-8 py-3 text-sm'} bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest hover:scale-105 transition-transform`}
                   >
                     {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    {isPaused ? 'Start Session' : 'Pause Session'}
+                    {isPaused ? 'Start' : 'Pause'}
                   </button>
-                  <button 
-                    onClick={() => {
-                      setCalibration(null);
-                      setCalibrationStep('wizard');
-                    }}
-                    className="flex items-center gap-2 px-8 py-3 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Recalibrate
-                  </button>
+                  {!isCompact && (
+                    <button 
+                      onClick={() => {
+                        setCalibration(null);
+                        setCalibrationStep('wizard');
+                      }}
+                      className="flex items-center gap-2 px-8 py-3 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Recalibrate
+                    </button>
+                  )}
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Current Exercise</p>
-                  <p className="font-serif italic text-xl">Clementi Sonatina Op.36 No.1</p>
+                  {!isCompact && <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Current Exercise</p>}
+                  <p className={`font-serif italic ${isCompact ? 'text-sm' : 'text-xl'}`}>Clementi Sonatina Op.36 No.1</p>
                 </div>
               </div>
 
-              <div className="lg:col-span-4 grid grid-cols-2 gap-4">
-                <div className="bg-white border-2 border-[#141414] p-4 shadow-[6px_6px_0px_0px_#141414]">
+              <div className={`lg:col-span-4 grid grid-cols-2 ${isCompact ? 'gap-2' : 'gap-4'}`}>
+                <div className={`bg-white border-2 border-[#141414] ${isCompact ? 'p-2' : 'p-4'} shadow-[6px_6px_0px_0px_#141414]`}>
                   <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Accuracy</p>
-                  <p className="text-3xl font-mono">94%</p>
+                  <p className={`${isCompact ? 'text-lg' : 'text-3xl'} font-mono`}>94%</p>
                 </div>
-                <div className="bg-white border-2 border-[#141414] p-4 shadow-[6px_6px_0px_0px_#141414]">
+                <div className={`bg-white border-2 border-[#141414] ${isCompact ? 'p-2' : 'p-4'} shadow-[6px_6px_0px_0px_#141414]`}>
                   <p className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Progress</p>
-                  <p className="text-3xl font-mono">{currentNoteIndex} / 42</p>
+                  <p className={`${isCompact ? 'text-lg' : 'text-3xl'} font-mono`}>{currentNoteIndex} / 42</p>
                 </div>
               </div>
             </div>

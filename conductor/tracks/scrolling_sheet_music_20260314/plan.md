@@ -19,10 +19,10 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Auto-Scrolling Implementation' (Protocol in workflow.md) 409474b
 
 ## Phase 3: UI Refinements and Toggles
-- [ ] Task: Implement Compact HUD Mode
-    - [ ] Write failing tests for HUD component state transitions
-    - [ ] Implement compact information display logic for limited vertical space
-- [ ] Task: Implement Manual Layout Toggles
-    - [ ] Write failing tests for layout state persistence/toggling
-    - [ ] Implement UI controls to hide/show keyboard and other overlays
+- [x] Task: Implement Compact HUD Mode
+    - [x] Write failing tests for HUD component state transitions
+    - [x] Implement compact information display logic for limited vertical space
+- [x] Task: Implement Manual Layout Toggles
+    - [x] Write failing tests for layout state persistence/toggling
+    - [x] Implement UI controls to hide/show keyboard and other overlays
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: UI Refinements and Toggles' (Protocol in workflow.md)
