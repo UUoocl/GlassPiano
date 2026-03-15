@@ -13,9 +13,9 @@
 - [x] Task: Refactor KeyboardOverlay for Transformation 92f6f34
     - [x] Write failing tests for CSS/Canvas transform application to the overlay container
     - [x] Implement transform application in `KeyboardOverlay.tsx`
-- [ ] Task: Align Hand Landmarks Rendering
-    - [ ] Write failing tests for landmark orientation compensation
-    - [ ] Update landmark rendering logic to apply the calculated rotation and scale
+- [x] Task: Align Hand Landmarks Rendering 2be6c38
+    - [x] Write failing tests for landmark orientation compensation
+    - [x] Update landmark rendering logic to apply the calculated rotation and scale
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Render Alignment' (Protocol in workflow.md)
 
 ## Phase 3: Interactive Verification & Fine-Tuning UI
