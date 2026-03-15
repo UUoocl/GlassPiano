@@ -18,11 +18,11 @@
     - [x] Implement Step 3 UI with dropdowns for 88/76/61/49/25/Custom and 2/3 accidentals
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Layout Steps' (Protocol in workflow.md) be639fd
 
-## Phase 3: Integration & Visual Calibration
-- [ ] Task: Implement Step 4: Piano Calibration (Corners)
-    - [ ] Write Tests for integration with existing `CalibrationOverlay` logic
-    - [ ] Implement Step 4 UI by wrapping or refactoring `CalibrationOverlay` into the wizard
-- [ ] Task: Finalize Wizard Integration
-    - [ ] Write Tests for overall wizard completion and state persistence
-    - [ ] Integrate `CalibrationWizard` into `App.tsx` to force flow on startup
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Integration & Visual Calibration' (Protocol in workflow.md)
+## Phase 3: Integration & Visual Calibration [checkpoint: d243b78]
+- [x] Task: Implement Step 4: Piano Calibration (Corners) 1db82d7
+    - [x] Write Tests for integration with existing `CalibrationOverlay` logic
+    - [x] Implement Step 4 UI by wrapping or refactoring `CalibrationOverlay` into the wizard
+- [x] Task: Finalize Wizard Integration 1db82d7
+    - [x] Write Tests for overall wizard completion and state persistence
+    - [x] Integrate `CalibrationWizard` into `App.tsx` to force flow on startup
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Integration & Visual Calibration' (Protocol in workflow.md) d243b78
