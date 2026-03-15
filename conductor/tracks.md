@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Improve Piano Calibration onboarding flow with a sequential wizard.**
+- [x] **Track: Improve Piano Calibration onboarding flow with a sequential wizard.**
   *Link: [./tracks/improve_calibration_20260314/](./tracks/improve_calibration_20260314/)*
