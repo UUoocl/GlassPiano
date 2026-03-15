@@ -9,14 +9,14 @@
     - [x] Implement resizing logic to ensure `NotationView` fills available vertical space
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Viewport Optimization' (Protocol in workflow.md) 0e4a78f
 
-## Phase 2: Auto-Scrolling Implementation
+## Phase 2: Auto-Scrolling Implementation [checkpoint: 409474b]
 - [x] Task: Implement OSMD Cursor Position Detection
     - [x] Write failing tests for staff/measure detection logic
     - [x] Implement utility to retrieve the current staff's vertical offset from OSMD cursor
 - [x] Task: Implement Smooth Scrolling Mechanism
     - [x] Write failing tests for scrolling container state updates
     - [x] Implement smooth continuous scroll to top-align the active staff
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Auto-Scrolling Implementation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Auto-Scrolling Implementation' (Protocol in workflow.md) 409474b
 
 ## Phase 3: UI Refinements and Toggles
 - [ ] Task: Implement Compact HUD Mode
