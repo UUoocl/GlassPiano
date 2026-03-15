@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Results } from '@mediapipe/hands';
-import { KeyboardConfig } from '../types';
+import { KeyboardConfig, Calibration } from '../types';
+import { calculateKeyboardToCameraTransform } from '../services/vision/alignmentService';
 
 interface KeyboardOverlayProps {
   activeNotes: number[];
@@ -9,9 +10,18 @@ interface KeyboardOverlayProps {
   handResults: Results | null;
   hideKeyboard?: boolean;
   config: KeyboardConfig;
+  calibration?: Calibration | null;
 }
 
-export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, hoveredNotes, targetNote, handResults, hideKeyboard, config }) => {
+export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ 
+  activeNotes, 
+  hoveredNotes, 
+  targetNote, 
+  handResults, 
+  hideKeyboard, 
+  config,
+  calibration 
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -33,7 +43,25 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, h
       ctx.fill();
 
       if (!hideKeyboard) {
-        // Draw Virtual Keyboard
+        ctx.save();
+        
+        if (calibration) {
+          const transform = calculateKeyboardToCameraTransform(calibration);
+          const { tx, ty, rotation, scale } = transform;
+          
+          // Apply transform to context
+          // Note: transform is in normalized (0-1) space. 
+          // We need to scale it to canvas pixels.
+          ctx.translate(tx * width, ty * height);
+          ctx.rotate(rotation);
+          ctx.scale(scale * width, scale * width); // Uniform scale for X and Y relative to width
+        } else {
+          // Fallback: bottom of screen
+          ctx.translate(0, height - 120);
+          ctx.scale(width, 1);
+        }
+
+        // Draw Virtual Keyboard in normalized (0-1) X-space
         const { totalKeys, startMidi } = config;
         const endMidi = startMidi + totalKeys - 1;
         
@@ -42,7 +70,8 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, h
           if (![1, 3, 6, 8, 10].includes(pitch % 12)) numWhiteKeys++;
         }
         
-        const whiteKeyWidth = width / numWhiteKeys;
+        const whiteKeyWidth = 1 / numWhiteKeys;
+        const keyHeight = calibration ? 0.3 : 120; // Height in transformed units
         let whiteKeyIndex = 0;
         
         ctx.globalAlpha = 0.4;
@@ -57,9 +86,10 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, h
             else if (hoveredNotes.includes(pitch)) color = '#fde047'; // Hover: Yellow
             
             ctx.fillStyle = color;
-            ctx.fillRect(x, height - 120, whiteKeyWidth - 1, 120);
+            ctx.fillRect(x, 0, whiteKeyWidth, keyHeight);
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.strokeRect(x, height - 120, whiteKeyWidth - 1, 120);
+            ctx.lineWidth = 0.002; // Thin line in normalized units
+            ctx.strokeRect(x, 0, whiteKeyWidth, keyHeight);
             whiteKeyIndex++;
           }
         }
@@ -77,15 +107,16 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, h
             else if (hoveredNotes.includes(pitch)) color = '#eab308'; // Hover: Dark Yellow
             
             ctx.fillStyle = color;
-            ctx.fillRect(x, height - 120, whiteKeyWidth * 0.6, 75);
+            ctx.fillRect(x, 0, whiteKeyWidth * 0.6, keyHeight * 0.6);
           } else {
             whiteKeyIndex++;
           }
         }
+        ctx.restore();
         ctx.globalAlpha = 1.0;
       }
 
-      // Draw Hands
+      // Draw Hands (Remains in Camera Space for now, as requested in Phase 2)
       if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
         handResults.multiHandLandmarks.forEach((landmarks, handIndex) => {
           // Draw connections with high visibility
@@ -142,7 +173,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ activeNotes, h
     };
 
     render();
-  }, [activeNotes, hoveredNotes, targetNote, handResults, hideKeyboard, config]);
+  }, [activeNotes, hoveredNotes, targetNote, handResults, hideKeyboard, config, calibration]);
 
   return (
     <canvas 

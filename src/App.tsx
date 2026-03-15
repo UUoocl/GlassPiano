@@ -213,6 +213,7 @@ export default function App() {
                     handResults={handResults}
                     hideKeyboard={true}
                     config={keyboardConfig}
+                    calibration={calibration}
                   />
                 </div>
                 <motion.div 
@@ -276,6 +277,7 @@ export default function App() {
                     targetNote={CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length]}
                     handResults={handResults}
                     config={keyboardConfig}
+                    calibration={calibration}
                   />
                 </div>
               )}
