@@ -8,10 +8,16 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/20dd2583-f5db-4d85-9ce2-5bc972a74b94
 
+## Features
+
+- **AR Alignment System:** Precisely maps hand landmarks and virtual keyboard to the physical keyboard's orientation and position using affine transformations.
+- **Interactive Calibration:** A guided wizard with corner adjustment and key-press verification (lowest and highest white keys) ensures accurate alignment.
+- **Fine-Tuning Controls:** Sliders for rotation, scale, and offset provide users with the ability to make minor adjustments for perfect alignment.
+- **Horizontal Rendering:** Virtual keyboard and hand landmarks are rendered horizontally at the bottom of the screen, maintaining aspect ratio and aligning with the frame bottom.
+
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
