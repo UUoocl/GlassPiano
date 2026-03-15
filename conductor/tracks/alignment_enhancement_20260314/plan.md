@@ -1,9 +1,9 @@
 # Implementation Plan: Enhanced Hand-Keyboard Alignment
 
 ## Phase 1: Alignment Mathematics & Transformation Service
-- [ ] Task: Implement Affine Transformation Service
-    - [ ] Write failing tests for 4-point to transformation matrix calculation
-    - [ ] Implement `alignmentService.ts` with translation, rotation, and scaling logic
+- [x] Task: Implement Affine Transformation Service 1c1736f
+    - [x] Write failing tests for 4-point to transformation matrix calculation
+    - [x] Implement `alignmentService.ts` with translation, rotation, and scaling logic
 - [ ] Task: Coordinate Mapping Utilities
     - [ ] Write failing tests for mapping camera-space points to transformed keyboard-space
     - [ ] Implement utility functions for point conversion and origin alignment
