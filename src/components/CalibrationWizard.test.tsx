@@ -48,4 +48,30 @@ describe('CalibrationWizard', () => {
     render(<CalibrationWizard onComplete={() => {}} />);
     expect(screen.getByText(/MIDI Input Device/i)).toBeInTheDocument();
   });
+
+  it('captures MIDI note in step 2', async () => {
+    const { userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    const { midiService } = await import('../services/midiService');
+    
+    render(<CalibrationWizard onComplete={() => {}} />);
+    
+    // Step 1
+    const device = await screen.findByText(/Mock MIDI Device/i);
+    await user.click(device);
+    await user.click(screen.getByText(/Next/i));
+    
+    // Step 2
+    expect(screen.getByText(/Step 2: Press the leftmost key/i)).toBeInTheDocument();
+    
+    // Simulate MIDI note on
+    const midiCallback = (midiService.setCallbacks as any).mock.calls[(midiService.setCallbacks as any).mock.calls.length - 1][0];
+    midiCallback(21, 64); // Note 21 (A0)
+    
+    expect(await screen.findByText(/Key Detected!/i)).toBeInTheDocument();
+    expect(screen.getByText(/MIDI 21/i)).toBeInTheDocument();
+    
+    const nextButton = screen.getByText(/Next/i);
+    expect(nextButton).not.toBeDisabled();
+  });
 });
