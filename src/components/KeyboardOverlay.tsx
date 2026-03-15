@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Results } from '@mediapipe/hands';
 import { KeyboardConfig, Calibration, FineTune } from '../types';
-import { calculateKeyboardToCameraTransform, mapCameraToKeyboard } from '../services/vision/alignmentService';
+import { mapCameraToKeyboard } from '../services/vision/alignmentService';
 
 interface KeyboardOverlayProps {
   activeNotes: number[];
@@ -38,24 +38,16 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
-      // Debug: Draw a small indicator to show the canvas is active
-      ctx.fillStyle = '#00ff00';
-      ctx.beginPath();
-      ctx.arc(10, 10, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Setup Transformation
+      // Setup Transformation for HORIZONTAL rendering
+      // We want the keyboard to be at the bottom, parallel to the frame bottom.
       ctx.save();
-      if (calibration) {
-        const transform = calculateKeyboardToCameraTransform(calibration, fineTune || undefined);
-        const { tx, ty, rotation, scale } = transform;
-        ctx.translate(tx * width, ty * height);
-        ctx.rotate(rotation);
-        ctx.scale(scale * width, scale * width);
-      } else {
-        ctx.translate(0, height - 120);
-        ctx.scale(width, 1);
-      }
+      
+      const kbdHeightNormalized = 0.15; // 15% of screen height for the keyboard
+      const kbdY = height - (height * kbdHeightNormalized) - 20; // 20px padding from bottom
+      
+      // We'll scale the 0-1 keyboard space to fill the width
+      ctx.translate(0, kbdY);
+      ctx.scale(width, height * kbdHeightNormalized);
 
       if (!hideKeyboard) {
         // Draw Virtual Keyboard in normalized (0-1) X-space
@@ -68,10 +60,10 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
         }
         
         const whiteKeyWidth = 1 / numWhiteKeys;
-        const keyHeight = calibration ? 0.3 : 120; // Height in transformed units
+        const keyHeight = 1.0; // Fill the scaled height
         let whiteKeyIndex = 0;
         
-        ctx.globalAlpha = 0.4;
+        ctx.globalAlpha = 0.6;
         for (let pitch = startMidi; pitch <= endMidi; pitch++) {
           const isBlack = [1, 3, 6, 8, 10].includes(pitch % 12);
           if (!isBlack) {
@@ -84,8 +76,8 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
             
             ctx.fillStyle = color;
             ctx.fillRect(x, 0, whiteKeyWidth, keyHeight);
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.lineWidth = 0.002;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 0.001;
             ctx.strokeRect(x, 0, whiteKeyWidth, keyHeight);
             whiteKeyIndex++;
           }
@@ -112,13 +104,13 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
         ctx.globalAlpha = 1.0;
       }
 
-      // Draw Hands in the same transformed context
+      // Draw Hands mapped to this horizontal space
       if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
         handResults.multiHandLandmarks.forEach((rawLandmarks, handIndex) => {
-          // Map landmarks to keyboard space if calibration exists
+          // Map landmarks to keyboard space (which is horizontal 0-1)
           const landmarks = calibration 
             ? rawLandmarks.map(p => mapCameraToKeyboard(p, calibration, fineTune || undefined))
-            : rawLandmarks.map(p => ({ x: p.x, y: (p.y * height - (height - 120)) / 1 })); // Simple fallback mapping
+            : rawLandmarks.map(p => ({ x: p.x, y: p.y })); // Fallback
 
           const connections = [
             [0, 1], [1, 2], [2, 3], [3, 4],
@@ -129,7 +121,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
           ];
 
           ctx.strokeStyle = handIndex === 0 ? '#00ff00' : '#00ffff';
-          ctx.lineWidth = 0.005; // Line width in normalized units
+          ctx.lineWidth = 0.005; 
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           
