@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateAffineTransform, transformPoint } from './alignmentService';
+import { calculateAffineTransform, transformPoint, mapCameraToKeyboard } from './alignmentService';
 import { Calibration, Point } from '../../types';
 
 describe('alignmentService', () => {
@@ -50,6 +50,23 @@ describe('alignmentService', () => {
 
       // If we normalize by top-left to top-right distance
       expect(mappedTopRight.x).toBeCloseTo(1);
+    });
+  });
+
+  describe('mapCameraToKeyboard', () => {
+    it('should map a camera point to the normalized keyboard space', () => {
+      const calibration: Calibration = {
+        topLeft: { x: 0.1, y: 0.1 },
+        topRight: { x: 0.9, y: 0.1 },
+        bottomLeft: { x: 0.1, y: 0.5 },
+        bottomRight: { x: 0.9, y: 0.5 },
+      };
+
+      const point: Point = { x: 0.5, y: 0.1 }; // Middle of top edge
+      const mapped = mapCameraToKeyboard(point, calibration);
+
+      expect(mapped.x).toBeCloseTo(0.5);
+      expect(mapped.y).toBeCloseTo(0);
     });
   });
 });

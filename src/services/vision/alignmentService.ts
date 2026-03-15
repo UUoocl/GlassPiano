@@ -48,3 +48,12 @@ export function transformPoint(p: Point, transform: AffineTransform): Point {
     y: y2 * scale,
   };
 }
+
+/**
+ * Maps a camera point (0-1) to the normalized keyboard space (0-1)
+ * based on the calibration corners.
+ */
+export function mapCameraToKeyboard(p: Point, cal: Calibration): Point {
+  const transform = calculateAffineTransform(cal);
+  return transformPoint(p, transform);
+}
