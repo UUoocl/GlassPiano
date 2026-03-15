@@ -56,6 +56,16 @@ export default function App() {
     );
   }, [currentNoteIndex, isPaused]);
 
+  const triggerSuccess = useCallback(() => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#10b981', '#34d399', '#6ee7b7']
+    });
+    setCurrentNoteIndex(prev => prev + 1);
+  }, [currentNoteIndex]);
+
   const handleHandUpdate = useCallback((results: Results) => {
     setHandResults(results);
     
@@ -104,17 +114,7 @@ export default function App() {
     setActiveNotes(newActiveNotes);
     setHoveredNotes(newHoveredNotes);
     setIsFingerOver(fingerOver);
-  }, [calibration, isPaused, currentNoteIndex, keyboardConfig]);
-
-  const triggerSuccess = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#10b981', '#34d399', '#6ee7b7']
-    });
-    setCurrentNoteIndex(prev => prev + 1);
-  };
+  }, [calibration, isPaused, currentNoteIndex, keyboardConfig, triggerSuccess]);
 
   return (
     <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
@@ -161,7 +161,12 @@ export default function App() {
                   setCalibration(cal);
                   setCalibrationStep('verify');
                 }} />
-                <KeyboardSettings config={keyboardConfig} onChange={setKeyboardConfig} />
+                <KeyboardSettings 
+                  config={keyboardConfig} 
+                  onChange={setKeyboardConfig} 
+                  selectedMidiId={selectedMidiId}
+                  onMidiSelect={setSelectedMidiId}
+                />
               </>
             )}
 
@@ -184,8 +189,22 @@ export default function App() {
                     config={keyboardConfig}
                   />
                 </div>
-                <KeyboardSettings config={keyboardConfig} onChange={setKeyboardConfig} />
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white p-6 border-2 border-[#141414] shadow-[8px_8px_0px_0px_#141414] w-[90%] max-w-md text-center pointer-events-auto z-[60]">
+                <KeyboardSettings 
+                  config={keyboardConfig} 
+                  onChange={setKeyboardConfig} 
+                  selectedMidiId={selectedMidiId}
+                  onMidiSelect={setSelectedMidiId}
+                />
+                <motion.div 
+                  drag
+                  dragMomentum={false}
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white p-6 border-2 border-[#141414] shadow-[8px_8px_0px_0px_#141414] w-[90%] max-w-md text-center pointer-events-auto z-[60] cursor-default"
+                >
+                  <div className="cursor-move mb-2 opacity-20 flex justify-center">
+                    <svg className="w-6 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <path d="M7 7h10M7 12h10M7 17h10" />
+                    </svg>
+                  </div>
                   <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Adjust & Verify</h2>
                   <p className="text-sm opacity-70 mb-6">
                     Drag the blue corners to perfectly align the virtual keyboard with your physical keys. Press keys to test the mapping.
@@ -207,7 +226,7 @@ export default function App() {
                       Confirm
                     </button>
                   </div>
-                </div>
+                </motion.div>
               </div>
             )}
             

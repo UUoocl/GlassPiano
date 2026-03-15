@@ -35,7 +35,17 @@ export const CalibrationOverlay: React.FC<CalibrationOverlayProps> = ({ onComple
       className="absolute inset-0 z-50 cursor-crosshair bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center"
       onClick={handleClick}
     >
-      <div className="bg-white p-6 border-2 border-[#141414] shadow-[8px_8px_0px_0px_#141414] max-w-md text-center pointer-events-none">
+      <motion.div 
+        drag
+        dragMomentum={false}
+        onClick={e => e.stopPropagation()}
+        className="bg-white p-6 border-2 border-[#141414] shadow-[8px_8px_0px_0px_#141414] max-w-md text-center pointer-events-auto cursor-default z-50"
+      >
+        <div className="cursor-move mb-2 opacity-20 flex justify-center">
+          <svg className="w-6 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M7 7h10M7 12h10M7 17h10" />
+          </svg>
+        </div>
         <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Piano Calibration</h2>
         <p className="text-sm opacity-70 mb-4">
           Click the four corners of your piano keyboard in order:
@@ -52,7 +62,7 @@ export const CalibrationOverlay: React.FC<CalibrationOverlayProps> = ({ onComple
             />
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {points.map((p, i) => (
         <motion.div
