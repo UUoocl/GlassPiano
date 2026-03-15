@@ -18,11 +18,11 @@
     - [x] Implement smooth continuous scroll to top-align the active staff
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Auto-Scrolling Implementation' (Protocol in workflow.md) 409474b
 
-## Phase 3: UI Refinements and Toggles
+## Phase 3: UI Refinements and Toggles [checkpoint: e021509]
 - [x] Task: Implement Compact HUD Mode
     - [x] Write failing tests for HUD component state transitions
     - [x] Implement compact information display logic for limited vertical space
 - [x] Task: Implement Manual Layout Toggles
     - [x] Write failing tests for layout state persistence/toggling
     - [x] Implement UI controls to hide/show keyboard and other overlays
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: UI Refinements and Toggles' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: UI Refinements and Toggles' (Protocol in workflow.md) e021509
