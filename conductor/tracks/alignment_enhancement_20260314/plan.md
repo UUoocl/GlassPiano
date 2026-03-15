@@ -9,14 +9,14 @@
     - [x] Implement utility functions for point conversion and origin alignment
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Alignment Math' (Protocol in workflow.md)
 
-## Phase 2: Transformed Rendering Implementation
+## Phase 2: Transformed Rendering Implementation [checkpoint: b243c3b]
 - [x] Task: Refactor KeyboardOverlay for Transformation 92f6f34
     - [x] Write failing tests for CSS/Canvas transform application to the overlay container
     - [x] Implement transform application in `KeyboardOverlay.tsx`
 - [x] Task: Align Hand Landmarks Rendering 2be6c38
     - [x] Write failing tests for landmark orientation compensation
     - [x] Update landmark rendering logic to apply the calculated rotation and scale
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Render Alignment' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Render Alignment' (Protocol in workflow.md)
 
 ## Phase 3: Interactive Verification & Fine-Tuning UI
 - [ ] Task: Implement Post-Calibration Verification Routine
