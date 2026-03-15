@@ -6,6 +6,7 @@ import { CalibrationAdjuster } from './components/CalibrationAdjuster';
 import { KeyboardSettings } from './components/KeyboardSettings';
 import { MidiSelector } from './components/MidiSelector';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
+import { CalibrationWizard } from './components/CalibrationWizard';
 import { Calibration, Point, KeyboardConfig } from './types';
 import { mapPointToPiano, getPitchFromX, KeystrokeDetector } from './services/vision';
 import { midiService } from './services/midiService';
@@ -26,7 +27,7 @@ export default function App() {
   }, []);
 
   const [calibration, setCalibration] = useState<Calibration | null>(null);
-  const [calibrationStep, setCalibrationStep] = useState<'corners' | 'verify' | 'complete'>('corners');
+  const [calibrationStep, setCalibrationStep] = useState<'wizard' | 'verify' | 'complete'>('wizard');
   const [keyboardConfig, setKeyboardConfig] = useState<KeyboardConfig>({ totalKeys: 88, startMidi: 21 });
   const [showMidiSettings, setShowMidiSettings] = useState(false);
   const [selectedMidiId, setSelectedMidiId] = useState<string>('');
@@ -155,19 +156,13 @@ export default function App() {
               showVideo={calibrationStep !== 'complete'} 
             />
             
-            {calibrationStep === 'corners' && (
-              <>
-                <CalibrationOverlay onComplete={(cal) => {
-                  setCalibration(cal);
-                  setCalibrationStep('verify');
-                }} />
-                <KeyboardSettings 
-                  config={keyboardConfig} 
-                  onChange={setKeyboardConfig} 
-                  selectedMidiId={selectedMidiId}
-                  onMidiSelect={setSelectedMidiId}
-                />
-              </>
+            {calibrationStep === 'wizard' && (
+              <CalibrationWizard onComplete={(config) => {
+                setSelectedMidiId(config.midiId);
+                setKeyboardConfig(config.keyboard);
+                setCalibration(config.calibration);
+                setCalibrationStep('verify');
+              }} />
             )}
 
             {calibrationStep === 'verify' && (
@@ -189,12 +184,6 @@ export default function App() {
                     config={keyboardConfig}
                   />
                 </div>
-                <KeyboardSettings 
-                  config={keyboardConfig} 
-                  onChange={setKeyboardConfig} 
-                  selectedMidiId={selectedMidiId}
-                  onMidiSelect={setSelectedMidiId}
-                />
                 <motion.div 
                   drag
                   dragMomentum={false}
@@ -213,7 +202,7 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setCalibration(null);
-                        setCalibrationStep('corners');
+                        setCalibrationStep('wizard');
                       }}
                       className="px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
                     >
@@ -231,7 +220,7 @@ export default function App() {
             )}
             
             <div className="absolute top-4 left-4 bg-black/80 text-white px-4 py-2 rounded-md font-mono border border-white/20">
-              {calibrationStep === 'corners' ? 'STEP 1: CALIBRATE KEYBOARD' : 'STEP 2: VERIFY MAPPING'}
+              {calibrationStep === 'wizard' ? 'STEP 1: SEQUENTIAL WIZARD' : 'STEP 2: VERIFY MAPPING'}
             </div>
           </div>
         </div>
@@ -285,7 +274,7 @@ export default function App() {
                   <button 
                     onClick={() => {
                       setCalibration(null);
-                      setCalibrationStep('corners');
+                      setCalibrationStep('wizard');
                     }}
                     className="flex items-center gap-2 px-8 py-3 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
                   >

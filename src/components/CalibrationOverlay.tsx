@@ -34,6 +34,7 @@ export const CalibrationOverlay: React.FC<CalibrationOverlayProps> = ({ onComple
     <div 
       className="absolute inset-0 z-50 cursor-crosshair bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center"
       onClick={handleClick}
+      data-testid="calibration-container"
     >
       <motion.div 
         drag

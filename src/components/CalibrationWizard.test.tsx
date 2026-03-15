@@ -84,14 +84,18 @@ describe('CalibrationWizard', () => {
     
     // Step 4
     await user.click(screen.getByText(/Next/i));
-    expect(screen.getByText(/Step 4: Piano Calibration/i)).toBeInTheDocument();
+    expect(screen.getByText(/Piano Calibration/i)).toBeInTheDocument();
     
-    const finishButton = screen.getByText(/Finish/i);
-    await user.click(finishButton);
+    const container = screen.getByTestId('calibration-container');
+    await user.click(container);
+    await user.click(container);
+    await user.click(container);
+    await user.click(container);
     
     expect(onComplete).toHaveBeenCalledWith({
       midiId: '1',
-      keyboard: expect.objectContaining({ totalKeys: 61, startMidi: 21 })
+      keyboard: expect.objectContaining({ totalKeys: 61, startMidi: 21 }),
+      calibration: expect.any(Object)
     });
   });
 });
