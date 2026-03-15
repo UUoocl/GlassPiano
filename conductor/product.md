@@ -11,6 +11,7 @@ GlassPiano is an **AR Companion** designed to overlay feedback and guidance on r
 To deliver on our core value, development will prioritize:
 - **Hand Tracking:** High-precision, low-latency gesture and finger recognition using MediaPipe.
 - **Sheet Music Integration:** Enhancing digital rendering and interaction via OpenSheetMusicDisplay to sync seamlessly with user performance.
+- **Sequential Onboarding:** A guided calibration wizard to ensure correct MIDI, layout, and visual setup.
 
 ## 4. Success Metrics
 The primary metric for success is **Performance**. The application must maintain low latency in hand tracking, sheet music rendering, and audio/MIDI playback to ensure a realistic and responsive AR experience.
