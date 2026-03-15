@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay';
+import { OSMDSyncManager } from '../services/osmdSync';
 
 interface NotationViewProps {
   xmlUrl: string;
@@ -11,6 +12,7 @@ interface NotationViewProps {
 export const NotationView: React.FC<NotationViewProps> = ({ xmlUrl, currentNoteIndex, isFingerOver }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const osmdRef = useRef<OpenSheetMusicDisplay | null>(null);
+  const syncManagerRef = useRef(new OSMDSyncManager());
 
   const [error, setError] = useState<string | null>(null);
 
@@ -56,31 +58,8 @@ export const NotationView: React.FC<NotationViewProps> = ({ xmlUrl, currentNoteI
   useEffect(() => {
     if (osmdRef.current && osmdRef.current.cursor) {
       const cursor = osmdRef.current.cursor;
-      cursor.reset();
-      for (let i = 0; i < currentNoteIndex; i++) {
-        cursor.next();
-      }
-
-      const notes = cursor.GNotesUnderCursor();
-      if (notes) {
-        notes.forEach(note => {
-          const svgElement = note.getSVGGElement();
-          if (svgElement) {
-            const color = isFingerOver ? "#22c55e" : "#ef4444"; // Green if over, Red otherwise
-            
-            // Find notehead and stem within the SVG group
-            const noteheads = svgElement.querySelectorAll('.vf-notehead path');
-            const stems = svgElement.querySelectorAll('.vf-stem rect, .vf-stem path');
-            
-            noteheads.forEach(nh => (nh as SVGPathElement).style.fill = color);
-            stems.forEach(s => (s as SVGElement).style.fill = color);
-            
-            // Also update OSMD internal state so it persists on resize/re-render
-            note.NoteheadColor = color;
-            note.StemColor = color;
-          }
-        });
-      }
+      syncManagerRef.current.syncCursor(cursor as any, currentNoteIndex);
+      syncManagerRef.current.updateNoteColor(cursor as any, isFingerOver);
     }
   }, [currentNoteIndex, isFingerOver]);
 
