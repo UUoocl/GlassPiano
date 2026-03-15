@@ -10,6 +10,13 @@ export interface Calibration {
   bottomRight: Point;
 }
 
+export interface FineTune {
+  rotation: number;
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface KeyboardConfig {
   totalKeys: number;
   startMidi: number;

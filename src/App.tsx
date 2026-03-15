@@ -7,7 +7,7 @@ import { KeyboardSettings } from './components/KeyboardSettings';
 import { MidiSelector } from './components/MidiSelector';
 import { KeyboardOverlay } from './components/KeyboardOverlay';
 import { CalibrationWizard } from './components/CalibrationWizard';
-import { Calibration, Point, KeyboardConfig } from './types';
+import { Calibration, Point, KeyboardConfig, FineTune } from './types';
 import { mapPointToPiano, getPitchFromX, KeystrokeDetector } from './services/vision';
 import { midiService } from './services/midiService';
 import { Results } from '@mediapipe/hands';
@@ -30,6 +30,7 @@ export default function App() {
   const [calibrationStep, setCalibrationStep] = useState<'wizard' | 'verify' | 'complete'>('wizard');
   const [verificationStage, setVerificationStage] = useState<'adjust' | 'press-low' | 'press-high'>('adjust');
   const [lastDetectedPitch, setLastDetectedPitch] = useState<number | null>(null);
+  const [fineTune, setFineTune] = useState<FineTune>({ rotation: 0, scale: 1, offsetX: 0, offsetY: 0 });
   const [keyboardConfig, setKeyboardConfig] = useState<KeyboardConfig>({ totalKeys: 88, startMidi: 21 });
   const [showMidiSettings, setShowMidiSettings] = useState(false);
   const [selectedMidiId, setSelectedMidiId] = useState<string>('');
@@ -124,7 +125,8 @@ export default function App() {
         
         for (const tipIndex of fingerTips) {
           const tip = landmarks[tipIndex];
-          const mapped = mapPointToPiano({ x: tip.x, y: tip.y }, calibration);
+          // Use our mapping service which now supports fineTune
+          const mapped = mapPointToPiano({ x: tip.x, y: tip.y }, calibration, fineTune);
           
           // Only process if the finger is within the calibrated area (with some margin)
           if (mapped.x >= -0.05 && mapped.x <= 1.05 && mapped.y >= -0.1 && mapped.y <= 1.1) {
@@ -153,7 +155,7 @@ export default function App() {
     setActiveNotes(newActiveNotes);
     setHoveredNotes(newHoveredNotes);
     setIsFingerOver(fingerOver);
-  }, [calibration, isPaused, currentNoteIndex, keyboardConfig, triggerSuccess]);
+  }, [calibration, isPaused, currentNoteIndex, keyboardConfig, triggerSuccess, fineTune]);
 
   return (
     <div className="h-screen overflow-hidden bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0] flex flex-col">
@@ -222,6 +224,7 @@ export default function App() {
                 {verificationStage === 'adjust' && (
                   <CalibrationAdjuster 
                     calibration={calibration!}
+                    fineTune={fineTune}
                     onChange={setCalibration}
                     activeNotes={activeNotes}
                     hoveredNotes={hoveredNotes}
@@ -245,6 +248,7 @@ export default function App() {
                     hideKeyboard={false}
                     config={keyboardConfig}
                     calibration={calibration}
+                    fineTune={fineTune}
                   />
                 </div>
                 <motion.div 
@@ -261,14 +265,64 @@ export default function App() {
                   {verificationStage === 'adjust' && (
                     <>
                       <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Adjust & Verify</h2>
-                      <p className="text-sm opacity-70 mb-6">
-                        Drag the blue corners to perfectly align the virtual keyboard with your physical keys. Press keys to test the mapping.
+                      <p className="text-sm opacity-70 mb-4">
+                        Drag the blue corners to align. Use sliders for fine-tuning.
                       </p>
+                      
+                      {/* Fine Tuning Sliders */}
+                      <div className="flex flex-col gap-2 mb-6 text-left">
+                        <label className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold uppercase opacity-50">Rotation</span>
+                            <span className="text-[10px] font-mono">{(fineTune.rotation * 180 / Math.PI).toFixed(1)}°</span>
+                          </div>
+                          <input 
+                            type="range" min="-0.2" max="0.2" step="0.005" 
+                            className="accent-[#141414]"
+                            value={fineTune.rotation} 
+                            onChange={e => setFineTune(prev => ({...prev, rotation: parseFloat(e.target.value)}))} 
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold uppercase opacity-50">Scale</span>
+                            <span className="text-[10px] font-mono">{fineTune.scale.toFixed(2)}x</span>
+                          </div>
+                          <input 
+                            type="range" min="0.8" max="1.2" step="0.005" 
+                            className="accent-[#141414]"
+                            value={fineTune.scale} 
+                            onChange={e => setFineTune(prev => ({...prev, scale: parseFloat(e.target.value)}))} 
+                          />
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <label className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase opacity-50">X Offset</span>
+                            <input 
+                              type="range" min="-0.1" max="0.1" step="0.002" 
+                              className="accent-[#141414]"
+                              value={fineTune.offsetX} 
+                              onChange={e => setFineTune(prev => ({...prev, offsetX: parseFloat(e.target.value)}))} 
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase opacity-50">Y Offset</span>
+                            <input 
+                              type="range" min="-0.1" max="0.1" step="0.002" 
+                              className="accent-[#141414]"
+                              value={fineTune.offsetY} 
+                              onChange={e => setFineTune(prev => ({...prev, offsetY: parseFloat(e.target.value)}))} 
+                            />
+                          </label>
+                        </div>
+                      </div>
+
                       <div className="flex gap-4 justify-center">
                         <button 
                           onClick={() => {
                             setCalibration(null);
                             setCalibrationStep('wizard');
+                            setFineTune({ rotation: 0, scale: 1, offsetX: 0, offsetY: 0 });
                           }}
                           className="px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
                         >
@@ -356,6 +410,7 @@ export default function App() {
                     handResults={handResults}
                     config={keyboardConfig}
                     calibration={calibration}
+                    fineTune={fineTune}
                   />
                 </div>
               )}
@@ -391,6 +446,7 @@ export default function App() {
                       onClick={() => {
                         setCalibration(null);
                         setCalibrationStep('wizard');
+                        setFineTune({ rotation: 0, scale: 1, offsetX: 0, offsetY: 0 });
                       }}
                       className="flex items-center gap-2 px-8 py-3 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
                     >

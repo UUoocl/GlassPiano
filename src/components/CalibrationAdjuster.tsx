@@ -1,15 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Calibration, KeyboardConfig } from '../types';
+import { Calibration, KeyboardConfig, FineTune } from '../types';
+import { calculateKeyboardToCameraTransform } from '../services/vision/alignmentService';
 
 interface Props {
   calibration: Calibration;
+  fineTune?: FineTune | null;
   onChange: (cal: Calibration) => void;
   hoveredNotes: number[];
   activeNotes: number[];
   config: KeyboardConfig;
 }
 
-export const CalibrationAdjuster: React.FC<Props> = ({ calibration, onChange, hoveredNotes, activeNotes, config }) => {
+export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, onChange, hoveredNotes, activeNotes, config }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [draggingPoint, setDraggingPoint] = useState<keyof Calibration | null>(null);
@@ -29,73 +31,99 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, onChange, ho
 
     ctx.clearRect(0, 0, width, height);
 
-    const { topLeft, topRight, bottomLeft, bottomRight } = calibration;
-    const { totalKeys, startMidi } = config;
-    const endMidi = startMidi + totalKeys - 1;
-
-    const whiteKeys: number[] = [];
-    for (let pitch = startMidi; pitch <= endMidi; pitch++) {
-      if (![1, 3, 6, 8, 10].includes(pitch % 12)) {
-        whiteKeys.push(pitch);
-      }
-    }
-    const numWhiteKeys = whiteKeys.length;
-
-    // Draw white keys
-    whiteKeys.forEach((pitch, i) => {
-      const t1 = i / numWhiteKeys;
-      const t2 = (i + 1) / numWhiteKeys;
-
-      const tl = { x: topLeft.x + (topRight.x - topLeft.x) * t1, y: topLeft.y + (topRight.y - topLeft.y) * t1 };
-      const tr = { x: topLeft.x + (topRight.x - topLeft.x) * t2, y: topLeft.y + (topRight.y - topLeft.y) * t2 };
-      const br = { x: bottomLeft.x + (bottomRight.x - bottomLeft.x) * t2, y: bottomLeft.y + (bottomRight.y - bottomLeft.y) * t2 };
-      const bl = { x: bottomLeft.x + (bottomRight.x - bottomLeft.x) * t1, y: bottomLeft.y + (bottomRight.y - bottomLeft.y) * t1 };
-
-      ctx.beginPath();
-      ctx.moveTo(tl.x * width, tl.y * height);
-      ctx.lineTo(tr.x * width, tr.y * height);
-      ctx.lineTo(br.x * width, br.y * height);
-      ctx.lineTo(bl.x * width, bl.y * height);
-      ctx.closePath();
-
-      if (activeNotes.includes(pitch)) {
-        ctx.fillStyle = 'rgba(34, 197, 94, 0.6)'; // Green
-        ctx.fill();
-      } else if (hoveredNotes.includes(pitch)) {
-        ctx.fillStyle = 'rgba(253, 224, 71, 0.6)'; // Yellow
-        ctx.fill();
-      } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.fill();
-      }
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    });
-
-    // Draw black keys
-    let currentWhiteIndex = 0;
-    for (let pitch = startMidi; pitch <= endMidi; pitch++) {
-      const isBlack = [1, 3, 6, 8, 10].includes(pitch % 12);
+    ctx.save();
+    
+    if (fineTune) {
+      // We apply the transform from normalized keyboard space to camera space
+      const transform = calculateKeyboardToCameraTransform(calibration, fineTune);
+      const { tx, ty, rotation, scale } = transform;
       
-      if (isBlack) {
-        const tCenter = currentWhiteIndex / numWhiteKeys;
-        const blackKeyWidth = (1 / numWhiteKeys) * 0.6;
-        const t1 = tCenter - blackKeyWidth / 2;
-        const t2 = tCenter + blackKeyWidth / 2;
+      ctx.translate(tx * width, ty * height);
+      ctx.rotate(rotation);
+      ctx.scale(scale * width, scale * width);
+      
+      // Since we applied the full transform, we now draw in normalized keyboard space (0 to 1)
+      const { totalKeys, startMidi } = config;
+      const endMidi = startMidi + totalKeys - 1;
+
+      const whiteKeys: number[] = [];
+      for (let pitch = startMidi; pitch <= endMidi; pitch++) {
+        if (![1, 3, 6, 8, 10].includes(pitch % 12)) {
+          whiteKeys.push(pitch);
+        }
+      }
+      const numWhiteKeys = whiteKeys.length;
+      const whiteKeyWidth = 1 / numWhiteKeys;
+
+      // Draw white keys
+      whiteKeys.forEach((pitch, i) => {
+        const x = i * whiteKeyWidth;
+        ctx.beginPath();
+        ctx.rect(x, 0, whiteKeyWidth, 0.3); // Height in transformed units
         
-        // Black keys go about 60% down the keyboard
-        const midY = 0.6;
-        
+        if (activeNotes.includes(pitch)) {
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.6)'; // Green
+          ctx.fill();
+        } else if (hoveredNotes.includes(pitch)) {
+          ctx.fillStyle = 'rgba(253, 224, 71, 0.6)'; // Yellow
+          ctx.fill();
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fill();
+        }
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 0.002;
+        ctx.stroke();
+      });
+
+      // Draw black keys
+      let whiteKeyIndex = 0;
+      for (let pitch = startMidi; pitch <= endMidi; pitch++) {
+        const isBlack = [1, 3, 6, 8, 10].includes(pitch % 12);
+        if (isBlack) {
+          const x = (whiteKeyIndex * whiteKeyWidth) - (whiteKeyWidth * 0.3);
+          ctx.beginPath();
+          ctx.rect(x, 0, whiteKeyWidth * 0.6, 0.3 * 0.6);
+          
+          if (activeNotes.includes(pitch)) {
+            ctx.fillStyle = 'rgba(22, 163, 74, 0.8)'; // Dark Green
+          } else if (hoveredNotes.includes(pitch)) {
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.8)'; // Dark Yellow
+          } else {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          }
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.lineWidth = 0.001;
+          ctx.stroke();
+        } else {
+          whiteKeyIndex++;
+        }
+      }
+    } else {
+      // Fallback to the old drawing logic if no fineTune (unlikely now)
+      const { topLeft, topRight, bottomLeft, bottomRight } = calibration;
+      const { totalKeys, startMidi } = config;
+      const endMidi = startMidi + totalKeys - 1;
+
+      const whiteKeys: number[] = [];
+      for (let pitch = startMidi; pitch <= endMidi; pitch++) {
+        if (![1, 3, 6, 8, 10].includes(pitch % 12)) {
+          whiteKeys.push(pitch);
+        }
+      }
+      const numWhiteKeys = whiteKeys.length;
+
+      // Draw white keys
+      whiteKeys.forEach((pitch, i) => {
+        const t1 = i / numWhiteKeys;
+        const t2 = (i + 1) / numWhiteKeys;
+
         const tl = { x: topLeft.x + (topRight.x - topLeft.x) * t1, y: topLeft.y + (topRight.y - topLeft.y) * t1 };
         const tr = { x: topLeft.x + (topRight.x - topLeft.x) * t2, y: topLeft.y + (topRight.y - topLeft.y) * t2 };
-        
-        const mlLeft = { x: topLeft.x + (bottomLeft.x - topLeft.x) * midY, y: topLeft.y + (bottomLeft.y - topLeft.y) * midY };
-        const mlRight = { x: topRight.x + (bottomRight.x - topRight.x) * midY, y: topRight.y + (bottomRight.y - topRight.y) * midY };
-        
-        const bl = { x: mlLeft.x + (mlRight.x - mlLeft.x) * t1, y: mlLeft.y + (mlRight.y - mlLeft.y) * t1 };
-        const br = { x: mlLeft.x + (mlRight.x - mlLeft.x) * t2, y: mlLeft.y + (mlRight.y - mlLeft.y) * t2 };
+        const br = { x: bottomLeft.x + (bottomRight.x - bottomLeft.x) * t2, y: bottomLeft.y + (bottomRight.y - bottomLeft.y) * t2 };
+        const bl = { x: bottomLeft.x + (bottomRight.x - bottomLeft.x) * t1, y: bottomLeft.y + (bottomRight.y - bottomLeft.y) * t1 };
 
         ctx.beginPath();
         ctx.moveTo(tl.x * width, tl.y * height);
@@ -105,20 +133,68 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, onChange, ho
         ctx.closePath();
 
         if (activeNotes.includes(pitch)) {
-          ctx.fillStyle = 'rgba(22, 163, 74, 0.8)'; // Dark Green
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.6)'; // Green
+          ctx.fill();
         } else if (hoveredNotes.includes(pitch)) {
-          ctx.fillStyle = 'rgba(234, 179, 8, 0.8)'; // Dark Yellow
+          ctx.fillStyle = 'rgba(253, 224, 71, 0.6)'; // Yellow
+          ctx.fill();
         } else {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fill();
         }
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
         ctx.stroke();
-      } else {
-        currentWhiteIndex++;
+      });
+
+      // Draw black keys
+      let currentWhiteIndex = 0;
+      for (let pitch = startMidi; pitch <= endMidi; pitch++) {
+        const isBlack = [1, 3, 6, 8, 10].includes(pitch % 12);
+        
+        if (isBlack) {
+          const tCenter = currentWhiteIndex / numWhiteKeys;
+          const blackKeyWidth = (1 / numWhiteKeys) * 0.6;
+          const t1 = tCenter - blackKeyWidth / 2;
+          const t2 = tCenter + blackKeyWidth / 2;
+          
+          const midY = 0.6;
+          
+          const tl = { x: topLeft.x + (topRight.x - topLeft.x) * t1, y: topLeft.y + (topRight.y - topLeft.y) * t1 };
+          const tr = { x: topLeft.x + (topRight.x - topLeft.x) * t2, y: topLeft.y + (topRight.y - topLeft.y) * t2 };
+          
+          const mlLeft = { x: topLeft.x + (bottomLeft.x - topLeft.x) * midY, y: topLeft.y + (bottomLeft.y - topLeft.y) * midY };
+          const mlRight = { x: topRight.x + (bottomRight.x - topRight.x) * midY, y: topRight.y + (bottomRight.y - topRight.y) * midY };
+          
+          const bl = { x: mlLeft.x + (mlRight.x - mlLeft.x) * t1, y: mlLeft.y + (mlRight.y - mlLeft.y) * t1 };
+          const br = { x: mlLeft.x + (mlRight.x - mlLeft.x) * t2, y: mlLeft.y + (mlRight.y - mlLeft.y) * t2 };
+
+          ctx.beginPath();
+          ctx.moveTo(tl.x * width, tl.y * height);
+          ctx.lineTo(tr.x * width, tr.y * height);
+          ctx.lineTo(br.x * width, br.y * height);
+          ctx.lineTo(bl.x * width, bl.y * height);
+          ctx.closePath();
+
+          if (activeNotes.includes(pitch)) {
+            ctx.fillStyle = 'rgba(22, 163, 74, 0.8)'; // Dark Green
+          } else if (hoveredNotes.includes(pitch)) {
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.8)'; // Dark Yellow
+          } else {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          }
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+          ctx.stroke();
+        } else {
+          currentWhiteIndex++;
+        }
       }
     }
-  }, [calibration, hoveredNotes, activeNotes, config]);
+    
+    ctx.restore();
+  }, [calibration, fineTune, hoveredNotes, activeNotes, config]);
 
   const handlePointerDown = (point: keyof Calibration) => (e: React.PointerEvent) => {
     e.preventDefault();

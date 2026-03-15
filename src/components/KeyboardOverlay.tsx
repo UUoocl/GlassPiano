@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Results } from '@mediapipe/hands';
-import { KeyboardConfig, Calibration } from '../types';
+import { KeyboardConfig, Calibration, FineTune } from '../types';
 import { calculateKeyboardToCameraTransform, mapCameraToKeyboard } from '../services/vision/alignmentService';
 
 interface KeyboardOverlayProps {
@@ -11,6 +11,7 @@ interface KeyboardOverlayProps {
   hideKeyboard?: boolean;
   config: KeyboardConfig;
   calibration?: Calibration | null;
+  fineTune?: FineTune | null;
 }
 
 export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({ 
@@ -20,7 +21,8 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
   handResults, 
   hideKeyboard, 
   config,
-  calibration 
+  calibration,
+  fineTune
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -45,7 +47,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
       // Setup Transformation
       ctx.save();
       if (calibration) {
-        const transform = calculateKeyboardToCameraTransform(calibration);
+        const transform = calculateKeyboardToCameraTransform(calibration, fineTune || undefined);
         const { tx, ty, rotation, scale } = transform;
         ctx.translate(tx * width, ty * height);
         ctx.rotate(rotation);
@@ -115,7 +117,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
         handResults.multiHandLandmarks.forEach((rawLandmarks, handIndex) => {
           // Map landmarks to keyboard space if calibration exists
           const landmarks = calibration 
-            ? rawLandmarks.map(p => mapCameraToKeyboard(p, calibration))
+            ? rawLandmarks.map(p => mapCameraToKeyboard(p, calibration, fineTune || undefined))
             : rawLandmarks.map(p => ({ x: p.x, y: (p.y * height - (height - 120)) / 1 })); // Simple fallback mapping
 
           const connections = [
@@ -157,7 +159,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
     };
 
     render();
-  }, [activeNotes, hoveredNotes, targetNote, handResults, hideKeyboard, config, calibration]);
+  }, [activeNotes, hoveredNotes, targetNote, handResults, hideKeyboard, config, calibration, fineTune]);
 
   return (
     <canvas 
