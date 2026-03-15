@@ -2,6 +2,7 @@
 
 ## 1. UI/UX Design Philosophy
 - **Minimalist & Functional:** The user interface should be unobtrusive, placing the primary focus on the camera view and ensuring maximum legibility for the sheet music.
+- **Fit-to-Frame Layout:** The entire application interface must fit within the visible browser viewport, using responsive scaling and compact modes to avoid window-level scrollbars.
 
 ## 2. Accessibility
 - **Keyboard Navigation:** All UI controls, menus, and calibration settings must be fully accessible and operable via keyboard, ensuring inclusivity for all users.
