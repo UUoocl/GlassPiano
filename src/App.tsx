@@ -28,6 +28,8 @@ export default function App() {
 
   const [calibration, setCalibration] = useState<Calibration | null>(null);
   const [calibrationStep, setCalibrationStep] = useState<'wizard' | 'verify' | 'complete'>('wizard');
+  const [verificationStage, setVerificationStage] = useState<'adjust' | 'press-low' | 'press-high'>('adjust');
+  const [lastDetectedPitch, setLastDetectedPitch] = useState<number | null>(null);
   const [keyboardConfig, setKeyboardConfig] = useState<KeyboardConfig>({ totalKeys: 88, startMidi: 21 });
   const [showMidiSettings, setShowMidiSettings] = useState(false);
   const [selectedMidiId, setSelectedMidiId] = useState<string>('');
@@ -57,23 +59,6 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    midiService.setCallbacks(
-      (pitch) => {
-        setActiveNotes(prev => [...new Set([...prev, pitch])]);
-        
-        // Advance if the correct MIDI note is hit
-        const targetPitch = CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length];
-        if (pitch === targetPitch && !isPaused) {
-          triggerSuccess();
-        }
-      },
-      (pitch) => {
-        setActiveNotes(prev => prev.filter(p => p !== pitch));
-      }
-    );
-  }, [currentNoteIndex, isPaused]);
-
   const triggerSuccess = useCallback(() => {
     confetti({
       particleCount: 100,
@@ -83,6 +68,42 @@ export default function App() {
     });
     setCurrentNoteIndex(prev => prev + 1);
   }, [currentNoteIndex]);
+
+  useEffect(() => {
+    midiService.setCallbacks(
+      (pitch) => {
+        setActiveNotes(prev => [...new Set([...prev, pitch])]);
+        
+        if (calibrationStep === 'verify') {
+          setLastDetectedPitch(pitch);
+          if (verificationStage === 'press-low') {
+            // Check if it's the lowest white key
+            if (pitch === keyboardConfig.startMidi) {
+              setVerificationStage('press-high');
+            }
+          } else if (verificationStage === 'press-high') {
+            const endMidi = keyboardConfig.startMidi + keyboardConfig.totalKeys - 1;
+            // Find highest white key
+            let highestWhite = endMidi;
+            while ([1, 3, 6, 8, 10].includes(highestWhite % 12)) highestWhite--;
+            
+            if (pitch === highestWhite) {
+              setCalibrationStep('complete');
+            }
+          }
+        }
+
+        // Advance if the correct MIDI note is hit
+        const targetPitch = CLEMENTI_NOTES[currentNoteIndex % CLEMENTI_NOTES.length];
+        if (pitch === targetPitch && !isPaused && calibrationStep === 'complete') {
+          triggerSuccess();
+        }
+      },
+      (pitch) => {
+        setActiveNotes(prev => prev.filter(p => p !== pitch));
+      }
+    );
+  }, [currentNoteIndex, isPaused, calibrationStep, verificationStage, keyboardConfig, triggerSuccess]);
 
   const handleHandUpdate = useCallback((results: Results) => {
     setHandResults(results);
@@ -198,20 +219,30 @@ export default function App() {
 
             {calibrationStep === 'verify' && (
               <div className="absolute inset-0">
-                <CalibrationAdjuster 
-                  calibration={calibration!}
-                  onChange={setCalibration}
-                  activeNotes={activeNotes}
-                  hoveredNotes={hoveredNotes}
-                  config={keyboardConfig}
-                />
+                {verificationStage === 'adjust' && (
+                  <CalibrationAdjuster 
+                    calibration={calibration!}
+                    onChange={setCalibration}
+                    activeNotes={activeNotes}
+                    hoveredNotes={hoveredNotes}
+                    config={keyboardConfig}
+                  />
+                )}
                 <div className="absolute inset-0 pointer-events-none z-40">
                   <KeyboardOverlay 
-                    activeNotes={[]}
-                    hoveredNotes={[]}
-                    targetNote={null}
+                    activeNotes={activeNotes}
+                    hoveredNotes={hoveredNotes}
+                    targetNote={
+                      verificationStage === 'press-low' ? keyboardConfig.startMidi :
+                      verificationStage === 'press-high' ? (() => {
+                        const endMidi = keyboardConfig.startMidi + keyboardConfig.totalKeys - 1;
+                        let highestWhite = endMidi;
+                        while ([1, 3, 6, 8, 10].includes(highestWhite % 12)) highestWhite--;
+                        return highestWhite;
+                      })() : null
+                    }
                     handResults={handResults}
-                    hideKeyboard={true}
+                    hideKeyboard={false}
                     config={keyboardConfig}
                     calibration={calibration}
                   />
@@ -226,27 +257,74 @@ export default function App() {
                       <path d="M7 7h10M7 12h10M7 17h10" />
                     </svg>
                   </div>
-                  <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Adjust & Verify</h2>
-                  <p className="text-sm opacity-70 mb-6">
-                    Drag the blue corners to perfectly align the virtual keyboard with your physical keys. Press keys to test the mapping.
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <button 
-                      onClick={() => {
-                        setCalibration(null);
-                        setCalibrationStep('wizard');
-                      }}
-                      className="px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
-                    >
-                      Restart
-                    </button>
-                    <button 
-                      onClick={() => setCalibrationStep('complete')}
-                      className="px-6 py-2 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
-                    >
-                      Confirm
-                    </button>
-                  </div>
+                  
+                  {verificationStage === 'adjust' && (
+                    <>
+                      <h2 className="text-xl font-bold uppercase tracking-tighter mb-2">Adjust & Verify</h2>
+                      <p className="text-sm opacity-70 mb-6">
+                        Drag the blue corners to perfectly align the virtual keyboard with your physical keys. Press keys to test the mapping.
+                      </p>
+                      <div className="flex gap-4 justify-center">
+                        <button 
+                          onClick={() => {
+                            setCalibration(null);
+                            setCalibrationStep('wizard');
+                          }}
+                          className="px-6 py-2 border-2 border-[#141414] font-bold uppercase tracking-widest text-sm hover:bg-[#141414] hover:text-[#E4E3E0] transition-all"
+                        >
+                          Restart
+                        </button>
+                        <button 
+                          onClick={() => setVerificationStage('press-low')}
+                          className="px-6 py-2 bg-[#141414] text-[#E4E3E0] font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform"
+                        >
+                          Confirm
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {verificationStage === 'press-low' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h2 className="text-xl font-bold uppercase tracking-tighter mb-2 text-red-500">Press the lowest white key</h2>
+                      <p className="text-sm opacity-70 mb-6">
+                        We need to confirm the alignment. Please press the key highlighted in red on the overlay.
+                      </p>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="text-[10px] font-bold uppercase opacity-40">Waiting for pitch: {keyboardConfig.startMidi}</div>
+                        {lastDetectedPitch !== null && lastDetectedPitch !== keyboardConfig.startMidi && (
+                          <div className="text-xs text-amber-600 font-bold">Detected: {lastDetectedPitch} (Try again)</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {verificationStage === 'press-high' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h2 className="text-xl font-bold uppercase tracking-tighter mb-2 text-red-500">Press the highest white key</h2>
+                      <p className="text-sm opacity-70 mb-6">
+                        Almost there! Now press the highest white key highlighted in red.
+                      </p>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="text-[10px] font-bold uppercase opacity-40">
+                          Waiting for pitch: {(() => {
+                            const endMidi = keyboardConfig.startMidi + keyboardConfig.totalKeys - 1;
+                            let highestWhite = endMidi;
+                            while ([1, 3, 6, 8, 10].includes(highestWhite % 12)) highestWhite--;
+                            return highestWhite;
+                          })()}
+                        </div>
+                        {lastDetectedPitch !== null && lastDetectedPitch !== (() => {
+                          const endMidi = keyboardConfig.startMidi + keyboardConfig.totalKeys - 1;
+                          let highestWhite = endMidi;
+                          while ([1, 3, 6, 8, 10].includes(highestWhite % 12)) highestWhite--;
+                          return highestWhite;
+                        })() && (
+                          <div className="text-xs text-amber-600 font-bold">Detected: {lastDetectedPitch} (Try again)</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               </div>
             )}
