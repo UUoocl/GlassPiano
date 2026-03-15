@@ -25,4 +25,6 @@
 - [x] Task: Implement Manual Fine-Tuning Controls 40d476f
     - [x] Write failing tests for manual rotation/offset adjustments
     - [x] Implement sliders/controls for real-time alignment tweaking
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Tweak UI' (Protocol in workflow.md)
+    - [x] Rotate virtual keyboard to be parallel to frame bottom (Requested) 6b2a9ee
+    - [x] Fix hand landmarks aspect ratio and masking c01c5c3
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Verification & Tweak UI' (Protocol in workflow.md)
