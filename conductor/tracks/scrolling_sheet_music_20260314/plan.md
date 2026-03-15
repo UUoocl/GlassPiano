@@ -10,12 +10,12 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Viewport Optimization' (Protocol in workflow.md) 0e4a78f
 
 ## Phase 2: Auto-Scrolling Implementation
-- [ ] Task: Implement OSMD Cursor Position Detection
-    - [ ] Write failing tests for staff/measure detection logic
-    - [ ] Implement utility to retrieve the current staff's vertical offset from OSMD cursor
-- [ ] Task: Implement Smooth Scrolling Mechanism
-    - [ ] Write failing tests for scrolling container state updates
-    - [ ] Implement smooth continuous scroll to top-align the active staff
+- [x] Task: Implement OSMD Cursor Position Detection
+    - [x] Write failing tests for staff/measure detection logic
+    - [x] Implement utility to retrieve the current staff's vertical offset from OSMD cursor
+- [x] Task: Implement Smooth Scrolling Mechanism
+    - [x] Write failing tests for scrolling container state updates
+    - [x] Implement smooth continuous scroll to top-align the active staff
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Auto-Scrolling Implementation' (Protocol in workflow.md)
 
 ## Phase 3: UI Refinements and Toggles

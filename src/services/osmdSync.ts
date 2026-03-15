@@ -48,5 +48,23 @@ export class OSMDSyncManager {
         }
       });
     }
-  }
-}
+    }
+
+    public getVerticalOffset(cursor: Cursor, container: HTMLElement): number | null {
+      const notes = cursor.GNotesUnderCursor();
+      if (notes && notes.length > 0) {
+        // Use the first note under the cursor to find the vertical position
+        const firstNote = notes[0];
+        const svgElement = firstNote.getSVGGElement();
+        if (svgElement) {
+          const noteRect = svgElement.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+
+          // Calculate relative position + current scroll to get absolute position in content
+          return noteRect.top - containerRect.top + container.scrollTop;
+        }
+      }
+      return null;
+    }
+
+    }

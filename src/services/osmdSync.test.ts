@@ -58,5 +58,22 @@ describe('OSMDSyncManager', () => {
     
     syncManager.updateNoteColor(mockCursor, false); // Finger not over
     expect(mockNote.NoteheadColor).toBe('#ef4444');
-  });
-});
+    });
+
+    test('getVerticalOffset returns the top position relative to container', () => {
+      const mockNote = {
+        getSVGGElement: vi.fn().mockReturnValue({
+          getBoundingClientRect: vi.fn().mockReturnValue({ top: 150 }),
+        }),
+      };
+      const mockContainer = {
+        getBoundingClientRect: vi.fn().mockReturnValue({ top: 50 }),
+        scrollTop: 10,
+      };
+      mockCursor.GNotesUnderCursor.mockReturnValue([mockNote]);
+
+      // 150 (note top) - 50 (container top) + 10 (scroll) = 110
+      const offset = syncManager.getVerticalOffset(mockCursor, mockContainer as any);
+      expect(offset).toBe(110);
+    });
+    });

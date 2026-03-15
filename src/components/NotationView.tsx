@@ -75,11 +75,24 @@ export const NotationView: React.FC<NotationViewProps> = ({ xmlUrl, currentNoteI
       const cursor = osmdRef.current.cursor;
       syncManagerRef.current.syncCursor(cursor as any, currentNoteIndex);
       syncManagerRef.current.updateNoteColor(cursor as any, isFingerOver);
+
+      // Smooth scroll to keep current staff at the top
+      if (containerRef.current) {
+        const offset = syncManagerRef.current.getVerticalOffset(cursor as any, containerRef.current);
+        if (offset !== null) {
+          // Adjust offset to provide some top padding/context
+          const scrollTarget = Math.max(0, offset - 40);
+          containerRef.current.scrollTo({
+            top: scrollTarget,
+            behavior: 'smooth'
+          });
+        }
+      }
     }
   }, [currentNoteIndex, isFingerOver]);
 
   return (
-    <div className="w-full h-full bg-white relative">
+    <div className="w-full h-full bg-white relative overflow-hidden">
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10 p-6 text-center">
           <p className="text-red-500 font-medium">{error}</p>
