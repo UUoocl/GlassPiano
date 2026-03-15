@@ -1,12 +1,12 @@
 # Implementation Plan: Scrolling Sheet Music and Viewport Optimization
 
 ## Phase 1: Viewport Optimization (Fit-to-Frame)
-- [ ] Task: Refactor Main Layout for Viewport Fit
-    - [ ] Write failing tests for layout container dimensions
-    - [ ] Implement Flexbox/Grid structure with `h-screen` and `overflow-hidden`
-- [ ] Task: Implement Dynamic Notation Sizing
-    - [ ] Write failing tests for `NotationView` resizing logic
-    - [ ] Implement resizing logic to ensure `NotationView` fills available vertical space
+- [x] Task: Refactor Main Layout for Viewport Fit
+    - [x] Write failing tests for layout container dimensions
+    - [x] Implement Flexbox/Grid structure with `h-screen` and `overflow-hidden`
+- [x] Task: Implement Dynamic Notation Sizing
+    - [x] Write failing tests for `NotationView` resizing logic
+    - [x] Implement resizing logic to ensure `NotationView` fills available vertical space
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Viewport Optimization' (Protocol in workflow.md)
 
 ## Phase 2: Auto-Scrolling Implementation

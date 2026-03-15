@@ -50,8 +50,23 @@ export const NotationView: React.FC<NotationViewProps> = ({ xmlUrl, currentNoteI
 
     initAndLoad();
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (osmdRef.current) {
+        try {
+          osmdRef.current.render();
+        } catch (e) {
+          // Ignore render errors during resize if sheet is not fully loaded
+        }
+      }
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
     return () => {
       isMounted = false;
+      resizeObserver.disconnect();
     };
   }, [xmlUrl]);
 

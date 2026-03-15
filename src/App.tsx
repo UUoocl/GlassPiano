@@ -118,9 +118,9 @@ export default function App() {
   }, [calibration, isPaused, currentNoteIndex, keyboardConfig, triggerSuccess]);
 
   return (
-    <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
+    <div className="h-screen overflow-hidden bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0] flex flex-col">
       {/* Header */}
-      <header className="border-b border-[#141414] p-4 flex justify-between items-center">
+      <header className="border-b border-[#141414] p-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
           <Piano className="w-8 h-8" />
           <h1 className="text-2xl font-bold tracking-tighter uppercase italic font-serif">GlassPiano</h1>
@@ -142,7 +142,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="p-4 md:p-6 flex flex-col gap-4 md:gap-6 min-h-[calc(100vh-80px)] relative">
+      <main className="p-4 md:p-6 flex flex-col gap-4 md:gap-6 flex-1 min-h-0 relative">
         {/* Persistent Camera View (Hidden in practice mode, but always processing) */}
         <div className={`
           ${calibrationStep !== 'complete' 
@@ -227,8 +227,8 @@ export default function App() {
 
         {/* Practice Mode UI */}
         {calibrationStep === 'complete' && (
-          <div className="flex-1 flex flex-col gap-6 animate-in fade-in duration-500">
-            <div className="flex-1 relative bg-white border-4 border-[#141414] shadow-[12px_12px_0px_0px_#141414] overflow-hidden rounded-xl">
+          <div className="flex-1 flex flex-col gap-4 md:gap-6 min-h-0 animate-in fade-in duration-500">
+            <div className="flex-1 relative bg-white border-4 border-[#141414] shadow-[12px_12px_0px_0px_#141414] overflow-hidden rounded-xl min-h-0">
               {/* The base layer: Sheet Music */}
               <NotationView 
                 xmlUrl="/OpenSheetMusic/MuzioClementi_SonatinaOp36No1_Part1.xml" 
@@ -261,7 +261,7 @@ export default function App() {
             </div>
 
             {/* Bottom Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-end shrink-0">
               <div className="lg:col-span-8 bg-white border-2 border-[#141414] p-4 flex items-center justify-between shadow-[6px_6px_0px_0px_#141414]">
                 <div className="flex gap-4">
                   <button 
