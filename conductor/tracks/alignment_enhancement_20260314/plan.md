@@ -22,7 +22,7 @@
 - [x] Task: Implement Post-Calibration Verification Routine bb45b33
     - [x] Write failing tests for "Verification Step" state transitions
     - [x] Implement UI flow prompting user for "Calibration Confirmation Presses"
-- [ ] Task: Implement Manual Fine-Tuning Controls
-    - [ ] Write failing tests for manual rotation/offset adjustments
-    - [ ] Implement sliders/controls for real-time alignment tweaking
+- [x] Task: Implement Manual Fine-Tuning Controls 40d476f
+    - [x] Write failing tests for manual rotation/offset adjustments
+    - [x] Implement sliders/controls for real-time alignment tweaking
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification & Tweak UI' (Protocol in workflow.md)
