@@ -33,12 +33,14 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
 
     ctx.save();
     
-    // Position parallel to frame bottom
-    const kbdHeightNormalized = 0.15;
-    const kbdY = height - (height * kbdHeightNormalized) - 20;
+    // Position parallel to frame bottom with UNIFORM scale
+    const kbdHeightPixels = height * 0.15;
+    const kbdY = height - kbdHeightPixels - 20;
     
     ctx.translate(0, kbdY);
-    ctx.scale(width, height * kbdHeightNormalized);
+    ctx.scale(width, width);
+
+    const kbdHeightInUniformSpace = kbdHeightPixels / width;
 
     // Since we applied the full transform, we now draw in normalized keyboard space (0 to 1)
     const { totalKeys, startMidi } = config;
@@ -57,7 +59,7 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
     whiteKeys.forEach((pitch, i) => {
       const x = i * whiteKeyWidth;
       ctx.beginPath();
-      ctx.rect(x, 0, whiteKeyWidth, 0.3); // Height in transformed units
+      ctx.rect(x, 0, whiteKeyWidth, kbdHeightInUniformSpace);
       
       if (activeNotes.includes(pitch)) {
         ctx.fillStyle = 'rgba(34, 197, 94, 0.6)'; // Green
@@ -71,7 +73,7 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
       }
 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 0.002;
+      ctx.lineWidth = 1 / width;
       ctx.stroke();
     });
 
@@ -82,7 +84,7 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
       if (isBlack) {
         const x = (whiteKeyIndex * whiteKeyWidth) - (whiteKeyWidth * 0.3);
         ctx.beginPath();
-        ctx.rect(x, 0, whiteKeyWidth * 0.6, 0.3 * 0.6);
+        ctx.rect(x, 0, whiteKeyWidth * 0.6, kbdHeightInUniformSpace * 0.6);
         
         if (activeNotes.includes(pitch)) {
           ctx.fillStyle = 'rgba(22, 163, 74, 0.8)'; // Dark Green
@@ -93,7 +95,7 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
         }
         ctx.fill();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 0.001;
+        ctx.lineWidth = 1 / width;
         ctx.stroke();
       } else {
         whiteKeyIndex++;

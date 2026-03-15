@@ -38,19 +38,25 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
-      // Setup Transformation for HORIZONTAL rendering
-      // We want the keyboard to be at the bottom, parallel to the frame bottom.
+      // Setup Transformation
+      // We use UNIFORM scale (based on width) to maintain aspect ratio of hands.
       ctx.save();
       
-      const kbdHeightNormalized = 0.15; // 15% of screen height for the keyboard
-      const kbdY = height - (height * kbdHeightNormalized) - 20; // 20px padding from bottom
+      const kbdHeightPixels = height * 0.15;
+      const kbdY = height - kbdHeightPixels - 20;
       
-      // We'll scale the 0-1 keyboard space to fill the width
+      // Translate to keyboard origin
       ctx.translate(0, kbdY);
-      ctx.scale(width, height * kbdHeightNormalized);
+      
+      // We scale X by 'width' so 0-1 covers the screen width.
+      // We MUST scale Y by 'width' as well to keep aspect ratio 1:1.
+      ctx.scale(width, width);
+
+      // The virtual keyboard height in this UNIFORM space:
+      const kbdHeightInUniformSpace = kbdHeightPixels / width;
 
       if (!hideKeyboard) {
-        // Draw Virtual Keyboard in normalized (0-1) X-space
+        // Draw Virtual Keyboard
         const { totalKeys, startMidi } = config;
         const endMidi = startMidi + totalKeys - 1;
         
@@ -60,7 +66,6 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
         }
         
         const whiteKeyWidth = 1 / numWhiteKeys;
-        const keyHeight = 1.0; // Fill the scaled height
         let whiteKeyIndex = 0;
         
         ctx.globalAlpha = 0.6;
@@ -70,15 +75,15 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
             const x = whiteKeyIndex * whiteKeyWidth;
             
             let color = '#fff';
-            if (activeNotes.includes(pitch)) color = '#22c55e'; // Pressed: Green
-            else if (pitch === targetNote) color = '#ef4444'; // Target: Red
-            else if (hoveredNotes.includes(pitch)) color = '#fde047'; // Hover: Yellow
+            if (activeNotes.includes(pitch)) color = '#22c55e';
+            else if (pitch === targetNote) color = '#ef4444';
+            else if (hoveredNotes.includes(pitch)) color = '#fde047';
             
             ctx.fillStyle = color;
-            ctx.fillRect(x, 0, whiteKeyWidth, keyHeight);
+            ctx.fillRect(x, 0, whiteKeyWidth, kbdHeightInUniformSpace);
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.lineWidth = 0.001;
-            ctx.strokeRect(x, 0, whiteKeyWidth, keyHeight);
+            ctx.lineWidth = 1 / width; // 1 pixel wide
+            ctx.strokeRect(x, 0, whiteKeyWidth, kbdHeightInUniformSpace);
             whiteKeyIndex++;
           }
         }
@@ -91,12 +96,12 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
             const x = (whiteKeyIndex * whiteKeyWidth) - (whiteKeyWidth * 0.3);
             
             let color = '#000';
-            if (activeNotes.includes(pitch)) color = '#16a34a'; // Pressed: Dark Green
-            else if (pitch === targetNote) color = '#dc2626'; // Target: Dark Red
-            else if (hoveredNotes.includes(pitch)) color = '#eab308'; // Hover: Dark Yellow
+            if (activeNotes.includes(pitch)) color = '#16a34a';
+            else if (pitch === targetNote) color = '#dc2626';
+            else if (hoveredNotes.includes(pitch)) color = '#eab308';
             
             ctx.fillStyle = color;
-            ctx.fillRect(x, 0, whiteKeyWidth * 0.6, keyHeight * 0.6);
+            ctx.fillRect(x, 0, whiteKeyWidth * 0.6, kbdHeightInUniformSpace * 0.6);
           } else {
             whiteKeyIndex++;
           }
@@ -104,13 +109,13 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
         ctx.globalAlpha = 1.0;
       }
 
-      // Draw Hands mapped to this horizontal space
+      // Draw Hands (Hand landmarks are now in uniform keyboard space)
       if (handResults && handResults.multiHandLandmarks && handResults.multiHandLandmarks.length > 0) {
         handResults.multiHandLandmarks.forEach((rawLandmarks, handIndex) => {
-          // Map landmarks to keyboard space (which is horizontal 0-1)
+          // Map to horizontal keyboard space
           const landmarks = calibration 
             ? rawLandmarks.map(p => mapCameraToKeyboard(p, calibration, fineTune || undefined))
-            : rawLandmarks.map(p => ({ x: p.x, y: p.y })); // Fallback
+            : rawLandmarks.map(p => ({ x: p.x, y: p.y }));
 
           const connections = [
             [0, 1], [1, 2], [2, 3], [3, 4],
@@ -121,7 +126,7 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
           ];
 
           ctx.strokeStyle = handIndex === 0 ? '#00ff00' : '#00ffff';
-          ctx.lineWidth = 0.005; 
+          ctx.lineWidth = 5 / width; // Constant pixel width
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           
@@ -138,10 +143,10 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
           landmarks.forEach((p) => {
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 0.008, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 6 / width, 0, Math.PI * 2);
             ctx.fill();
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 0.002;
+            ctx.lineWidth = 2 / width;
             ctx.stroke();
           });
         });
