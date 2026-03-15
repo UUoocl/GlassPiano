@@ -35,7 +35,7 @@ export const CalibrationAdjuster: React.FC<Props> = ({ calibration, fineTune, on
     
     // Position parallel to frame bottom with UNIFORM scale
     const kbdHeightPixels = height * 0.15;
-    const kbdY = height - kbdHeightPixels - 20;
+    const kbdY = height - kbdHeightPixels - 100;
     
     ctx.translate(0, kbdY);
     ctx.scale(width, width);

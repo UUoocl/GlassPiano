@@ -43,7 +43,8 @@ export const KeyboardOverlay: React.FC<KeyboardOverlayProps> = ({
       ctx.save();
       
       const kbdHeightPixels = height * 0.15;
-      const kbdY = height - kbdHeightPixels - 20;
+      // Move it up more from the bottom to allow hands to be visible "below" it too
+      const kbdY = height - kbdHeightPixels - 100; 
       
       // Translate to keyboard origin
       ctx.translate(0, kbdY);
