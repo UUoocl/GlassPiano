@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Scrolling sheet music and viewport optimization.**
+- [x] **Track: Scrolling sheet music and viewport optimization.**
   *Link: [./tracks/scrolling_sheet_music_20260314/](./tracks/scrolling_sheet_music_20260314/)*
