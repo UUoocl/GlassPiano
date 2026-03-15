@@ -49,12 +49,13 @@ describe('CalibrationWizard', () => {
     expect(screen.getByText(/MIDI Input Device/i)).toBeInTheDocument();
   });
 
-  it('captures MIDI note in step 2', async () => {
+  it('captures MIDI note in step 2 and completes wizard', async () => {
     const { userEvent } = await import('@testing-library/user-event');
     const user = userEvent.setup();
     const { midiService } = await import('../services/midiService');
+    const onComplete = vi.fn();
     
-    render(<CalibrationWizard onComplete={() => {}} />);
+    render(<CalibrationWizard onComplete={onComplete} />);
     
     // Step 1
     const device = await screen.findByText(/Mock MIDI Device/i);
@@ -73,5 +74,24 @@ describe('CalibrationWizard', () => {
     
     const nextButton = screen.getByText(/Next/i);
     expect(nextButton).not.toBeDisabled();
+    await user.click(nextButton);
+    
+    // Step 3
+    expect(screen.getByText(/Step 3: Keyboard Configuration/i)).toBeInTheDocument();
+    
+    const presetsSelect = screen.getByLabelText(/Number of Keys \(Presets\)/i);
+    await user.selectOptions(presetsSelect, '61');
+    
+    // Step 4
+    await user.click(screen.getByText(/Next/i));
+    expect(screen.getByText(/Step 4: Piano Calibration/i)).toBeInTheDocument();
+    
+    const finishButton = screen.getByText(/Finish/i);
+    await user.click(finishButton);
+    
+    expect(onComplete).toHaveBeenCalledWith({
+      midiId: '1',
+      keyboard: expect.objectContaining({ totalKeys: 61, startMidi: 21 })
+    });
   });
 });
